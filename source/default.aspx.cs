@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Web.UI;
 
 namespace Loom
@@ -16,6 +17,17 @@ namespace Loom
             var span = $"<span style='color:{color}'>{name}</span>";
 
             MainHeading.InnerHtml = "Welcome to the " + span;
+
+            var scheme = Request.Url.Scheme;
+
+            var subdomain = "indigo.";
+
+            if (Request.IsLocal)
+                subdomain = "local-" + subdomain;
+
+            var domain = ConfigurationManager.AppSettings["Loom.RemoteDomain"];
+
+            IndigoAnchor.HRef = $"{scheme}://{subdomain}{domain}";
         }
     }
 }

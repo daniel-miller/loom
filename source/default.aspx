@@ -25,7 +25,7 @@
                 tenant (organization), and all application logic operates within that tenant's context.
             </p>
 
-            <h2>Why Path-Based Multitenancy?</h2>
+            <h2>Why path-based multitenancy?</h2>
             
             <p>
                 Multitenant applications serve multiple customers (tenants) from a single codebase. 
@@ -84,7 +84,7 @@
                 <img src="/img/iis.png" alt="IIS" />
             </div>
 
-            <h2>Request Flow</h2>
+            <h2>HTTP request flow</h2>
             
             <p>Here's what happens when a browser requests <code class="inline-code">/orange/about</code>:</p>
             
@@ -125,7 +125,7 @@
 |  3. Sends modified HTML to browser                       |
 +----------------------------------------------------------+</div>
 
-            <h2>Key Components</h2>
+            <h2>Key components</h2>
             
             <table class="components">
                 <tr>
@@ -180,7 +180,7 @@
                 </tr>
             </table>
 
-            <h2>URL Rewrite Rules</h2>
+            <h2>URL rewrite rules in IIS</h2>
             
             <p>Three rules in <code class="inline-code">Web.config</code> handle URL processing:</p>
             
@@ -234,7 +234,7 @@
                 <code class="inline-code">appcmd.exe set config -section:system.webServer/rewrite/allowedServerVariables /+"[name='ORGANIZATION_SLUG']" /commit:apphost</code>
             </div>
 
-            <h2>Response Filter</h2>
+            <h2>HTTP response filter</h2>
             
             <p>
                 The <code class="inline-code">OrganizationUrlResponseFilter</code> intercepts HTML responses 
@@ -268,7 +268,7 @@
                 current tenant slug to JavaScript via a data attribute or global variable.
             </div>
 
-            <h2>Accessing Tenant Context</h2>
+            <h2>Accessing the current tenant context</h2>
             
             <p>In page code-behind, use <code class="inline-code">HttpOrganizationContext</code>:</p>
             
@@ -293,7 +293,7 @@ var url = OrganizationUrl.Resolve("~/reports");
 // Force a specific tenant
 var url = OrganizationUrl.Resolve("~/reports", "blue");</code></pre>
 
-            <h2>Static Files</h2>
+            <h2>Static files</h2>
             
             <p>
                 Static files (CSS, JavaScript, images) in directories like <code class="inline-code">/css</code> 
@@ -311,7 +311,7 @@ var url = OrganizationUrl.Resolve("~/reports", "blue");</code></pre>
                 <li>Serve them dynamically through an HTTP handler that reads from tenant-specific storage</li>
             </ol>
 
-            <h2>Error Handling</h2>
+            <h2>Error handling</h2>
             
             <p>Two error pages handle tenant resolution failures:</p>
             
@@ -325,14 +325,15 @@ var url = OrganizationUrl.Resolve("~/reports", "blue");</code></pre>
                 <code class="inline-code">empty</code> tenant context.
             </p>
 
-            <h2>Try It Out</h2>
+            <h2>Try it out</h2>
             
             <p>Navigate to different tenant contexts:</p>
             
             <ul>
-                <li><a href="/red">Red Organization</a></li>
-                <li><a href="/orange">Orange Organization</a></li>
-                <li><a href="/blue">Blue Organization</a></li>
+                <li><a href="/red">Navigate to the Red organization</a></li>
+                <li><a href="/orange">Navigate to the Orange organization</a></li>
+                <li><a href="/blue">Navigate to the Blue organization (relative URL)</a></li>
+                <li><a runat="server" id="IndigoAnchor">Navigate to the Indigo organization (absolute URL)</a></li>
                 <li><a href="/organizations/search">View the list of all organizations</a></li>
             </ul>
 

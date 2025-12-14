@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Configuration;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace Loom
@@ -14,7 +15,7 @@ namespace Loom
 
         private const string LocalDomain = "localhost";
 
-        private const string RemoteDomain = "example.com";
+        private static string RemoteDomain = ConfigurationManager.AppSettings["Loom.RemoteDomain"].ToLower();
 
         private static readonly Regex LegacySubdomainPattern = new Regex(
             @"^(?<environment>(?:local|sandbox|dev)-)?(?<organization>[a-z0-9-]+)\." + Regex.Escape(RemoteDomain) + "$",
@@ -51,7 +52,7 @@ namespace Loom
                         var targetHost = string.IsNullOrEmpty(environment)
                             ? RemoteDomain
                             : environment == "local"
-                                ? $"localhost"
+                                ? LocalDomain
                                 : $"{environment}.{RemoteDomain}";
 
                         var path = request.Url.PathAndQuery.TrimStart('/');

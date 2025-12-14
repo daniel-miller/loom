@@ -1,8 +1,10 @@
 # Loom
 
-Path-based multitenancy for ASP.NET Web Forms applications running on .NET Framework 4.8. The first segment of every URL identifies the tenant (organization), and all application logic operates within that tenant's context.
+Loom is a prototype to demonstrate path-based multitenancy for ASP.NET Web Forms applications running on .NET Framework 4.8. 
 
-## Why Path-Based Multitenancy?
+The first segment of every URL identifies the tenant (organization), and all application logic operates within that tenant's context.
+
+## Why path-based multitenancy?
 
 Multitenant applications serve multiple customers (tenants) from a single codebase. There are three common approaches to identifying tenants:
 
@@ -18,7 +20,7 @@ This prototype uses the **path segment** approach because it offers the best bal
 
 Loom also shows how incoming requests on a subdomain are automatically rerouted to use the correct path, with the subdomain removed.
 
-## Request Flow
+## HTTP request flow
 
 Here's what happens when a browser requests `/orange/about`:
 
@@ -61,7 +63,7 @@ Browser requests: /orange/about
 +----------------------------------------------------------+
 ```
 
-## Key Components
+## Key components
 
 | Component | Responsibility |
 |-----------|----------------|
@@ -72,7 +74,7 @@ Browser requests: /orange/about
 | `OrganizationUrl` | Helper class for generating tenant-prefixed URLs in code-behind. Use `OrganizationUrl.Resolve("~/Page")` to generate correct paths. |
 | `OrganizationUrlResponseFilter` | A response filter that automatically rewrites root-relative URLs in HTML output. This allows pages to use simple paths like `href="/about"` without manually prefixing the tenant. Long-term, all such "unresolved" paths should be removed from the UI, and then this filter can be removed. |
 
-## URL Rewrite Rules
+## URL rewrite rules in IIS
 
 Three rules in `Web.config` handle URL processing:
 
@@ -120,7 +122,7 @@ Handles all other tenant requests, like `/orange/about`. Strips the tenant prefi
 
 > **Note:** The `ORGANIZATION_SLUG` server variable must be added to IIS's allowed server variables list. This is configured at the server level, not in `Web.config`. See the [IIS Configuration](#iis-configuration) section below.
 
-## Response Filter
+## HTTP response filter
 
 The `OrganizationUrlResponseFilter` intercepts HTML responses and rewrites root-relative URLs to include the tenant prefix. This allows developers to write simple markup without worrying about tenant paths:
 
@@ -140,7 +142,7 @@ Most important, this achieves backward-compatibility by eliminating the need to 
 
 > **Limitation:** The response filter only rewrites HTML attributes. JavaScript code that constructs URLs dynamically must use the tenant prefix explicitly. Consider exposing the current tenant slug to JavaScript via a data attribute or global variable.
 
-## Accessing Tenant Context
+## Accessing the current tenant context
 
 In page code-behind, use `HttpOrganizationContext`:
 
@@ -169,7 +171,7 @@ var url = OrganizationUrl.Resolve("~/reports");
 var url = OrganizationUrl.Resolve("~/reports", "blue");
 ```
 
-## Static Files
+## Static files
 
 Static files (CSS, JavaScript, images) in directories like `/css` and `/img` are served directly by IIS without passing through the rewrite rules. This is because the rewrite conditions check `{REQUEST_FILENAME}` and skip actual files.
 
@@ -178,7 +180,7 @@ For tenant-specific static files, you have two options:
 1. Store them in a path that includes the tenant: `/public/orange/logo.png`
 2. Serve them dynamically through an HTTP handler that reads from tenant-specific storage
 
-## Error Handling
+## Error handling
 
 Two error pages handle tenant resolution failures:
 
@@ -187,7 +189,7 @@ Two error pages handle tenant resolution failures:
 
 These pages are excluded from the rewrite rules and operate under the special `empty` tenant context.
 
-## IIS Express Configuration
+## IIS Express configuration
 
 When running locally in IIS Express, you need to allow the `ORGANIZATION_SLUG` server variable for URL Rewrite to work.
 

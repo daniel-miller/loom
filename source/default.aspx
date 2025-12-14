@@ -330,16 +330,10 @@ var url = OrganizationUrl.Resolve("~/reports", "blue");</code></pre>
             <p>Navigate to different tenant contexts:</p>
             
             <ul>
-                <li><a href="/red">Red Tenant</a></li>
-                <li><a href="/orange">Orange Tenant</a></li>
-                <li><a href="/blue">Blue Tenant</a></li>
+                <li><a href="/red">Red Organization</a></li>
+                <li><a href="/orange">Orange Organization</a></li>
+                <li><a href="/blue">Blue Organization</a></li>
                 <li><a href="/organizations/search">View the list of all organizations</a></li>
-            </ul>
-            
-            <p>Test error handling:</p>
-            
-            <ul>
-                <li><a href="/nonexistent" target="_blank">/nonexistent</a> - Invalid tenant</li>
             </ul>
 
         </div>

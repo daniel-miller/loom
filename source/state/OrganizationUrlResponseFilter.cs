@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,17 +12,25 @@ namespace Loom
         private readonly string _tenantSlug;
         private readonly MemoryStream _buffer = new MemoryStream();
         private readonly Regex _pattern;
+        private readonly string[] _allTenantSlugs;
 
         public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug)
         {
             _responseStream = responseStream;
             _tenantSlug = tenantSlug;
+            _allTenantSlugs = OrganizationCache.GetAll()
+                .Select(o => o.Slug)
+                .Concat(new[] { OrganizationCache.EmptySlug })
+                .ToArray();
 
-            // Match href="/...", src="/...", action="/...", etc.
-            // when the URL is not already prefixed like href="/{tenant}/..."
+            // Build pattern that excludes all tenant slugs, not just the current one
+            var slugPattern = string.Join("|", _allTenantSlugs.Select(Regex.Escape));
 
+            // Match href="/...", src="/...", action="/..."
+            // but NOT when URL starts with any tenant slug (with or without trailing slash)
+            // and NOT protocol-relative URLs (//)
             _pattern = new Regex(
-                @"(?<attr>href|src|action)=""(?<url>/(?!" + Regex.Escape(tenantSlug) + @"/|/))",
+                @"(?<attr>href|src|action)=""(?<url>/(?!(" + slugPattern + @")(/|""|$)|/))",
                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 

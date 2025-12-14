@@ -1,0 +1,46 @@
+# Build artifacts
+
+[Bb]in/
+[Dd]ebug/
+[Dd]ist/
+[Oo]bj/
+[Pp]ackages/
+[Pp]ublished/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+
+*.dll
+*.exe
+*.nupkg
+*.obj
+*.pdb
+*.zip
+
+# Configuration settings
+
+.idea/
+.vs/
+.vscode/
+
+[Aa]pp[Ss]ettings.[Ll]ocal.config
+[Aa]pp[Ss]ettings.[Ll]ocal.json
+
+# Node.js
+
+node_modules
+
+# Temporary files
+
+[Cc]ache/
+[Tt]emp/
+[Tt]mp/
+
+*.log
+*.rdl.data
+*.rptproj.rsuser
+*.rsuser
+*.suo
+*.user
+*.vsidx

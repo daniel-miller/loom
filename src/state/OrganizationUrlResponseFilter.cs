@@ -52,6 +52,7 @@ namespace Loom
         private readonly Encoding _encoding;
         private readonly Decoder _decoder;
         private readonly StringBuilder _textBuffer = new StringBuilder();
+        private bool _disposed;
 
         public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug, Encoding encoding)
         {
@@ -79,27 +80,34 @@ namespace Loom
 
         public override void Flush()
         {
-            // Held until Close — rewriting requires the full attribute context.
+            // Held until Dispose — rewriting requires the full attribute context.
         }
 
-        public override void Close()
+        protected override void Dispose(bool disposing)
         {
-            // Drain any incomplete multi-byte sequence held by the decoder.
-            var tail = new char[_encoding.GetMaxCharCount(0) + 16];
-            var n = _decoder.GetChars(Array.Empty<byte>(), 0, 0, tail, 0, flush: true);
-
-            if (n > 0)
+            if (disposing && !_disposed)
             {
-                _textBuffer.Append(tail, 0, n);
+                _disposed = true;
+
+                // Drain any incomplete multi-byte sequence held by the decoder.
+                var tail = new char[_encoding.GetMaxCharCount(0) + 16];
+                var n = _decoder.GetChars(Array.Empty<byte>(), 0, 0, tail, 0, flush: true);
+
+                if (n > 0)
+                {
+                    _textBuffer.Append(tail, 0, n);
+                }
+
+                if (_textBuffer.Length > 0)
+                {
+                    WriteRewritten(_textBuffer.ToString());
+                    _textBuffer.Clear();
+                }
+
+                _responseStream.Dispose();
             }
 
-            if (_textBuffer.Length > 0)
-            {
-                WriteRewritten(_textBuffer.ToString());
-                _textBuffer.Clear();
-            }
-
-            _responseStream.Close();
+            base.Dispose(disposing);
         }
 
         private void FlushAtSafeBoundary()
@@ -137,8 +145,12 @@ namespace Loom
         public override bool CanRead => false;
         public override bool CanSeek => false;
         public override bool CanWrite => true;
-        public override long Length => _textBuffer.Length;
-        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();

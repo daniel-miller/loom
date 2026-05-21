@@ -9,9 +9,14 @@ namespace Loom
     /// </summary>
     public static class OrganizationResolver
     {
-        public const string SlugVariable = "ORGANIZATION_SLUG";
+        /// <summary>IIS server variable populated by the URL rewrite rule in Web.config.</summary>
+        public const string SlugServerVariable = "ORGANIZATION_SLUG";
 
-        public const string SettingsVariable = "ORGANIZATION_SETTINGS";
+        /// <summary>HttpContext.Items key for the resolved organization slug.</summary>
+        public const string SlugItemKey = "Loom.OrganizationSlug";
+
+        /// <summary>HttpContext.Items key for the resolved organization settings.</summary>
+        public const string SettingsItemKey = "Loom.OrganizationSettings";
 
         private const string RemoteDomainSettingKey = "Loom.RemoteDomain";
 
@@ -51,10 +56,10 @@ namespace Loom
         {
             // Already resolved in this request cycle (internal rewrite)
 
-            if (HttpContext.Current.Items.Contains(SlugVariable))
+            if (HttpContext.Current.Items.Contains(SlugItemKey))
                 return;
 
-            var slug = request.ServerVariables[SlugVariable];
+            var slug = request.ServerVariables[SlugServerVariable];
 
             if (string.IsNullOrEmpty(slug))
             {
@@ -109,7 +114,7 @@ namespace Loom
                 return;
             }
 
-            HttpContext.Current.Items[SlugVariable] = slug;
+            HttpContext.Current.Items[SlugItemKey] = slug;
         }
 
         private static void RedirectAndComplete(HttpResponse response, string url)

@@ -10,7 +10,7 @@ namespace Loom
         public static string Resolve(string relativePath, string organizationSlug = null)
         {
             var organization = organizationSlug ??
-                HttpContext.Current.Items[OrganizationResolver.SlugVariable] as string;
+                HttpContext.Current.Items[OrganizationResolver.SlugItemKey] as string;
 
             var cleanPath = relativePath.TrimStart('~', '/');
 

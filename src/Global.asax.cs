@@ -22,7 +22,7 @@ namespace Loom
 
         protected void Application_PostRequestHandlerExecute(object sender, EventArgs e)
         {
-            var slug = HttpContext.Current.Items[OrganizationResolver.SlugVariable] as string;
+            var slug = HttpContext.Current.Items[OrganizationResolver.SlugItemKey] as string;
 
             var isMissingSlug = string.IsNullOrEmpty(slug);
 

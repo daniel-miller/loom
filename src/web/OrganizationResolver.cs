@@ -13,13 +13,39 @@ namespace Loom
 
         public const string SettingsVariable = "ORGANIZATION_SETTINGS";
 
+        private const string RemoteDomainSettingKey = "Loom.RemoteDomain";
+
         private const string LocalDomain = "localhost";
 
-        private static string RemoteDomain = ConfigurationManager.AppSettings["Loom.RemoteDomain"].ToLower();
+        private static readonly string RemoteDomain = LoadRemoteDomain();
 
         private static readonly Regex LegacySubdomainPattern = new Regex(
             @"^(?<environment>(?:local|sandbox|dev)-)?(?<organization>[a-z0-9-]+)\." + Regex.Escape(RemoteDomain) + "$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static string LoadRemoteDomain()
+        {
+            var value = ConfigurationManager.AppSettings[RemoteDomainSettingKey];
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ConfigurationErrorsException(
+                    $"Required appSettings key '{RemoteDomainSettingKey}' is missing or empty in Web.config.");
+            }
+
+            return value.Trim().ToLowerInvariant();
+        }
+
+        /// <summary>
+        /// Validates required configuration. Call from <c>Application_Start</c> to fail fast
+        /// on startup rather than on the first request.
+        /// </summary>
+        public static void EnsureConfigured()
+        {
+            // Touching the static field forces the type initializer to run,
+            // which surfaces any ConfigurationErrorsException at startup.
+            var _ = RemoteDomain;
+        }
 
         public static void Resolve(HttpRequest request, HttpResponse response)
         {

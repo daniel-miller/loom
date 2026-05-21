@@ -8,6 +8,8 @@ namespace Loom
     {
         void Application_Start(object sender, EventArgs e)
         {
+            OrganizationResolver.EnsureConfigured();
+
             RouteConfiguration.RegisterRoutes(RouteTable.Routes);
         }
 
@@ -24,9 +26,11 @@ namespace Loom
 
             var isMissingSlug = string.IsNullOrEmpty(slug);
 
+            var isEmptySlug = string.Equals(slug, OrganizationCache.EmptySlug, StringComparison.OrdinalIgnoreCase);
+
             var isHtml = Response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true;
 
-            if (!isMissingSlug && isHtml)
+            if (!isMissingSlug && !isEmptySlug && isHtml)
             {
                 Response.Filter = new OrganizationUrlResponseFilter(Response.Filter, slug);
             }

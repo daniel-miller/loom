@@ -70,7 +70,10 @@ namespace Loom
 
         public static bool IsValidOrganization(string slug)
         {
-            return Slugs.Contains(slug);
+            if (string.IsNullOrEmpty(slug) || slug == EmptySlug)
+                return false;
+
+            return Organizations.ContainsKey(slug);
         }
     }
 }

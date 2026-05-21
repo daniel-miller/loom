@@ -24,14 +24,10 @@ namespace Loom
 
         private static void Add(string slug)
         {
-            var settings = new OrganizationSettings
-            {
-                Color = slug,
-
-                Name = ToTitleCase(slug) + " Organization",
-
-                Slug = slug
-            };
+            var settings = new OrganizationSettings(
+                slug: slug,
+                name: ToTitleCase(slug) + " Organization",
+                color: slug);
 
             Organizations.Add(slug, settings);
         }

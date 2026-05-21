@@ -1,9 +1,16 @@
-﻿namespace Loom
+namespace Loom
 {
-    public class OrganizationSettings
+    public sealed class OrganizationSettings
     {
-        public string Color { get; set; }
-        public string Name { get; set; }
-        public string Slug { get; set; }
+        public OrganizationSettings(string slug, string name, string color)
+        {
+            Slug = slug;
+            Name = name;
+            Color = color;
+        }
+
+        public string Color { get; }
+        public string Name { get; }
+        public string Slug { get; }
     }
 }

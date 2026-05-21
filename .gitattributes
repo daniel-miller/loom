@@ -1,18 +1,5 @@
-* text=auto
-
-# Text formats
-*.cs     text
-*.css    text
-*.html   text
-*.json   text
-*.md     text
-*.ps1    text eol=crlf
-*.sql    text
-*.svg    text
-*.ts     text
-*.tsx    text
-*.yml    text
-*.yaml   text
+# No line-ending conversion. Files stored and checked out verbatim.
+# Binary declarations remain so Git treats them correctly for diff/merge.
 
 # Raster images
 *.png    binary

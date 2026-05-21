@@ -7,7 +7,7 @@ namespace Loom
     /// <summary>
     /// Determines the organization account (tenant) for the current HTTP request.
     /// </summary>
-    public class OrganizationResolver
+    public static class OrganizationResolver
     {
         public const string SlugVariable = "ORGANIZATION_SLUG";
 

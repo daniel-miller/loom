@@ -8,9 +8,15 @@ namespace Loom
 {
     public class OrganizationUrlResponseFilter : Stream
     {
-        // Slug list and rewrite regex depend only on the OrganizationCache, which is
-        // static-initialized. Build once at type load instead of per request.
-        private static readonly Regex RewritePattern = BuildRewritePattern();
+        // Rewrite regex depends on the OrganizationCache. Built once at type load and
+        // rebuilt whenever the cache is reloaded. Volatile so callers see the latest
+        // pattern without locking.
+        private static volatile Regex _rewritePattern = BuildRewritePattern();
+
+        static OrganizationUrlResponseFilter()
+        {
+            OrganizationCache.Reloaded += () => _rewritePattern = BuildRewritePattern();
+        }
 
         private static Regex BuildRewritePattern()
         {
@@ -61,7 +67,7 @@ namespace Loom
             _buffer.Position = 0;
             var html = _encoding.GetString(_buffer.ToArray());
 
-            html = RewritePattern.Replace(html, m =>
+            html = _rewritePattern.Replace(html, m =>
                 $"{m.Groups["attr"].Value}=\"/{_tenantSlug}{m.Groups["url"].Value}");
 
             var bytes = _encoding.GetBytes(html);

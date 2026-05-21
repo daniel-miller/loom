@@ -1,35 +1,91 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Loom
 {
+    /// <summary>
+    /// In-memory cache of organizations. Replaceable at runtime via <see cref="Reload"/>.
+    /// </summary>
     public static class OrganizationCache
     {
         public const string EmptySlug = "empty";
 
-        private static Dictionary<string, OrganizationSettings> Organizations = new Dictionary<string, OrganizationSettings>();
+        // Seed data for the prototype. Production should pull this from a database
+        // inside an IOrganizationLoader and swap the seed call in Reload().
+        private static readonly string[] SeedSlugs =
+            { "red", "orange", "yellow", "green", "blue", "indigo", "violet" };
 
-        private static string[] Slugs = { "red", "orange", "yellow", "green", "blue", "indigo", "violet" };
+        // Volatile reference so readers always see the latest snapshot after Reload.
+        // Snapshots are immutable; mutation happens by replacing the whole reference.
+        private static volatile ConcurrentDictionary<string, OrganizationSettings> _organizations = Load();
 
-        static OrganizationCache()
+        /// <summary>
+        /// Raised after the cache has been reloaded. Subscribers should rebuild any
+        /// derived state that depends on the cache contents (regex patterns, etc.).
+        /// </summary>
+        public static event Action Reloaded;
+
+        /// <summary>
+        /// Replaces the in-memory snapshot with a freshly loaded copy. Atomic from a
+        /// reader's perspective; readers see either the old or the new snapshot, never
+        /// a half-built one.
+        /// </summary>
+        public static void Reload()
         {
-            foreach (var slug in Slugs)
-            {
-                Add(slug);
-            }
+            var fresh = Load();
 
-            Add(EmptySlug);
+            Interlocked.Exchange(ref _organizations, fresh);
+
+            Reloaded?.Invoke();
         }
 
-        private static void Add(string slug)
+        public static OrganizationSettings[] GetAll()
         {
-            var settings = new OrganizationSettings(
+            return _organizations.Values
+                .Where(x => x.Slug != EmptySlug)
+                .OrderBy(x => x.Name)
+                .ToArray();
+        }
+
+        public static OrganizationSettings GetBySlug(string slug)
+        {
+            if (_organizations.TryGetValue(slug, out var settings))
+                return settings;
+
+            throw new ArgumentOutOfRangeException(nameof(slug), $"Organization not found: {slug}");
+        }
+
+        public static bool IsValidOrganization(string slug)
+        {
+            if (string.IsNullOrEmpty(slug) || slug == EmptySlug)
+                return false;
+
+            return _organizations.ContainsKey(slug);
+        }
+
+        private static ConcurrentDictionary<string, OrganizationSettings> Load()
+        {
+            var dict = new ConcurrentDictionary<string, OrganizationSettings>();
+
+            foreach (var slug in SeedSlugs)
+            {
+                dict[slug] = Build(slug);
+            }
+
+            dict[EmptySlug] = Build(EmptySlug);
+
+            return dict;
+        }
+
+        private static OrganizationSettings Build(string slug)
+        {
+            return new OrganizationSettings(
                 slug: slug,
                 name: ToTitleCase(slug) + " Organization",
                 color: slug);
-
-            Organizations.Add(slug, settings);
         }
 
         private static string ToTitleCase(string input)
@@ -46,30 +102,6 @@ namespace Loom
             }
 
             return string.Join(" ", words);
-        }
-
-        public static OrganizationSettings[] GetAll()
-        {
-            return Organizations.Values
-                .Where(x => x.Slug != EmptySlug)
-                .OrderBy(x => x.Name)
-                .ToArray();
-        }
-
-        public static OrganizationSettings GetBySlug(string slug)
-        {
-            if (Organizations.TryGetValue(slug, out var settings))
-                return settings;
-
-            throw new ArgumentOutOfRangeException(nameof(slug), $"Organization not found: {slug}");
-        }
-
-        public static bool IsValidOrganization(string slug)
-        {
-            if (string.IsNullOrEmpty(slug) || slug == EmptySlug)
-                return false;
-
-            return Organizations.ContainsKey(slug);
         }
     }
 }

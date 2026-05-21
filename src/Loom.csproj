@@ -131,6 +131,7 @@
       <DependentUpon>search.aspx</DependentUpon>
     </Compile>
     <Compile Include="state\OrganizationSettings.cs" />
+    <Compile Include="web\OrganizationHtml.cs" />
     <Compile Include="web\OrganizationUrl.cs" />
     <Compile Include="state\OrganizationUrlResponseFilter.cs" />
     <Compile Include="web\RouteConfiguration.cs" />

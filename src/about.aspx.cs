@@ -9,13 +9,7 @@ namespace Loom
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            var name = _orgContext.Settings.Name;
-
-            var color = _orgContext.Settings.Color;
-
-            var span = $"<span style='color:{color}'>{name}</span>";
-
-            MainHeading.InnerHtml = "About the " + span;
+            MainHeading.InnerHtml = "About the " + OrganizationHtml.ColoredName(_orgContext.Settings);
         }
     }
 }

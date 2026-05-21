@@ -15,8 +15,6 @@ namespace Loom
 
         protected void Application_BeginRequest(object sender, EventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"BeginRequest: {Request.Url.AbsolutePath}");
-
             OrganizationResolver.Resolve(new HttpContextWrapper(Context));
         }
 

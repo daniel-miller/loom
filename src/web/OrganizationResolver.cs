@@ -87,14 +87,14 @@ namespace Loom
                             ? $"{request.Url.Scheme}://{targetHost}/{organization}"
                             : $"{request.Url.Scheme}://{targetHost}/{organization}/{path}";
 
-                        response.Redirect(redirectUrl, true);
+                        RedirectAndComplete(response, redirectUrl);
                         return;
                     }
                 }
 
                 var url = OrganizationUrl.Resolve("~/context-missing", OrganizationCache.EmptySlug);
 
-                response.Redirect(url, true);
+                RedirectAndComplete(response, url);
 
                 return;
             }
@@ -104,12 +104,18 @@ namespace Loom
                 var url = OrganizationUrl.Resolve("~/context-invalid", OrganizationCache.EmptySlug)
                           + $"?requested={HttpUtility.UrlEncode(slug)}";
 
-                response.Redirect(url, true);
+                RedirectAndComplete(response, url);
 
                 return;
             }
 
             HttpContext.Current.Items[SlugVariable] = slug;
+        }
+
+        private static void RedirectAndComplete(HttpResponse response, string url)
+        {
+            response.Redirect(url, false);
+            HttpContext.Current.ApplicationInstance.CompleteRequest();
         }
     }
 }

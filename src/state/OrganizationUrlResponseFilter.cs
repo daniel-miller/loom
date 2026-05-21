@@ -10,14 +10,16 @@ namespace Loom
     {
         private readonly Stream _responseStream;
         private readonly string _tenantSlug;
+        private readonly Encoding _encoding;
         private readonly MemoryStream _buffer = new MemoryStream();
         private readonly Regex _pattern;
         private readonly string[] _allTenantSlugs;
 
-        public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug)
+        public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug, Encoding encoding)
         {
             _responseStream = responseStream;
             _tenantSlug = tenantSlug;
+            _encoding = encoding ?? Encoding.UTF8;
             _allTenantSlugs = OrganizationCache.GetAll()
                 .Select(o => o.Slug)
                 .Concat(new[] { OrganizationCache.EmptySlug })
@@ -53,12 +55,12 @@ namespace Loom
             }
 
             _buffer.Position = 0;
-            var html = Encoding.UTF8.GetString(_buffer.ToArray());
+            var html = _encoding.GetString(_buffer.ToArray());
 
             html = _pattern.Replace(html, m =>
                 $"{m.Groups["attr"].Value}=\"/{_tenantSlug}{m.Groups["url"].Value}");
 
-            var bytes = Encoding.UTF8.GetBytes(html);
+            var bytes = _encoding.GetBytes(html);
             _responseStream.Write(bytes, 0, bytes.Length);
             _responseStream.Close();
         }

@@ -32,7 +32,7 @@ namespace Loom
 
             if (!isMissingSlug && !isEmptySlug && isHtml)
             {
-                Response.Filter = new OrganizationUrlResponseFilter(Response.Filter, slug);
+                Response.Filter = new OrganizationUrlResponseFilter(Response.Filter, slug, Response.ContentEncoding);
             }
         }
 

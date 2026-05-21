@@ -8,32 +8,36 @@ namespace Loom
 {
     public class OrganizationUrlResponseFilter : Stream
     {
+        // Slug list and rewrite regex depend only on the OrganizationCache, which is
+        // static-initialized. Build once at type load instead of per request.
+        private static readonly Regex RewritePattern = BuildRewritePattern();
+
+        private static Regex BuildRewritePattern()
+        {
+            var allTenantSlugs = OrganizationCache.GetAll()
+                .Select(o => o.Slug)
+                .Concat(new[] { OrganizationCache.EmptySlug });
+
+            var slugPattern = string.Join("|", allTenantSlugs.Select(Regex.Escape));
+
+            // Match href="/...", src="/...", action="/..."
+            // but NOT when URL starts with any tenant slug (with or without trailing slash)
+            // and NOT protocol-relative URLs (//)
+            return new Regex(
+                @"(?<attr>href|src|action)=""(?<url>/(?!(" + slugPattern + @")(/|""|$)|/))",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        }
+
         private readonly Stream _responseStream;
         private readonly string _tenantSlug;
         private readonly Encoding _encoding;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private readonly Regex _pattern;
-        private readonly string[] _allTenantSlugs;
 
         public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug, Encoding encoding)
         {
             _responseStream = responseStream;
             _tenantSlug = tenantSlug;
             _encoding = encoding ?? Encoding.UTF8;
-            _allTenantSlugs = OrganizationCache.GetAll()
-                .Select(o => o.Slug)
-                .Concat(new[] { OrganizationCache.EmptySlug })
-                .ToArray();
-
-            // Build pattern that excludes all tenant slugs, not just the current one
-            var slugPattern = string.Join("|", _allTenantSlugs.Select(Regex.Escape));
-
-            // Match href="/...", src="/...", action="/..."
-            // but NOT when URL starts with any tenant slug (with or without trailing slash)
-            // and NOT protocol-relative URLs (//)
-            _pattern = new Regex(
-                @"(?<attr>href|src|action)=""(?<url>/(?!(" + slugPattern + @")(/|""|$)|/))",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -57,7 +61,7 @@ namespace Loom
             _buffer.Position = 0;
             var html = _encoding.GetString(_buffer.ToArray());
 
-            html = _pattern.Replace(html, m =>
+            html = RewritePattern.Replace(html, m =>
                 $"{m.Groups["attr"].Value}=\"/{_tenantSlug}{m.Groups["url"].Value}");
 
             var bytes = _encoding.GetBytes(html);

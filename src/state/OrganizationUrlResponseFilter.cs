@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,15 @@ using System.Text.RegularExpressions;
 
 namespace Loom
 {
+    /// <summary>
+    /// Streaming HTML response filter that prepends the current tenant slug to
+    /// root-relative <c>href</c>, <c>src</c>, and <c>action</c> URLs.
+    ///
+    /// Buffered text is flushed to the underlying stream whenever a safe boundary
+    /// (the last '>' in the current buffer) is found and the buffer exceeds the
+    /// flush threshold. Splitting at tag boundaries guarantees no attribute match
+    /// is severed across a flush.
+    /// </summary>
     public class OrganizationUrlResponseFilter : Stream
     {
         // Rewrite regex depends on the OrganizationCache. Built once at type load and
@@ -34,59 +43,104 @@ namespace Loom
                 RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
+        // Once the decoded buffer grows past this many chars, try to flush up to
+        // the last '>' boundary. Keeps memory bounded for large responses.
+        private const int FlushThresholdChars = 64 * 1024;
+
         private readonly Stream _responseStream;
         private readonly string _tenantSlug;
         private readonly Encoding _encoding;
-        private readonly MemoryStream _buffer = new MemoryStream();
+        private readonly Decoder _decoder;
+        private readonly StringBuilder _textBuffer = new StringBuilder();
 
         public OrganizationUrlResponseFilter(Stream responseStream, string tenantSlug, Encoding encoding)
         {
             _responseStream = responseStream;
             _tenantSlug = tenantSlug;
             _encoding = encoding ?? Encoding.UTF8;
+            _decoder = _encoding.GetDecoder();
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            _buffer.Write(buffer, offset, count);
+            if (count == 0) return;
+
+            var maxChars = _encoding.GetMaxCharCount(count);
+            var chars = new char[maxChars];
+            var decoded = _decoder.GetChars(buffer, offset, count, chars, 0);
+
+            _textBuffer.Append(chars, 0, decoded);
+
+            if (_textBuffer.Length >= FlushThresholdChars)
+            {
+                FlushAtSafeBoundary();
+            }
         }
 
         public override void Flush()
         {
-            // Don't flush to underlying stream yet
+            // Held until Close — rewriting requires the full attribute context.
         }
 
         public override void Close()
         {
-            if (_buffer.Length == 0)
+            // Drain any incomplete multi-byte sequence held by the decoder.
+            var tail = new char[_encoding.GetMaxCharCount(0) + 16];
+            var n = _decoder.GetChars(Array.Empty<byte>(), 0, 0, tail, 0, flush: true);
+
+            if (n > 0)
             {
-                _responseStream.Close();
-                return;
+                _textBuffer.Append(tail, 0, n);
             }
 
-            _buffer.Position = 0;
-            var html = _encoding.GetString(_buffer.ToArray());
+            if (_textBuffer.Length > 0)
+            {
+                WriteRewritten(_textBuffer.ToString());
+                _textBuffer.Clear();
+            }
 
-            html = _rewritePattern.Replace(html, m =>
+            _responseStream.Close();
+        }
+
+        private void FlushAtSafeBoundary()
+        {
+            // Split at the last '>' so no attribute match straddles the boundary.
+            var splitAt = -1;
+            for (var i = _textBuffer.Length - 1; i >= 0; i--)
+            {
+                if (_textBuffer[i] == '>')
+                {
+                    splitAt = i + 1;
+                    break;
+                }
+            }
+
+            if (splitAt <= 0) return;
+
+            var slice = _textBuffer.ToString(0, splitAt);
+
+            WriteRewritten(slice);
+
+            _textBuffer.Remove(0, splitAt);
+        }
+
+        private void WriteRewritten(string html)
+        {
+            var rewritten = _rewritePattern.Replace(html, m =>
                 $"{m.Groups["attr"].Value}=\"/{_tenantSlug}{m.Groups["url"].Value}");
 
-            var bytes = _encoding.GetBytes(html);
+            var bytes = _encoding.GetBytes(rewritten);
+
             _responseStream.Write(bytes, 0, bytes.Length);
-            _responseStream.Close();
         }
 
         public override bool CanRead => false;
         public override bool CanSeek => false;
         public override bool CanWrite => true;
-        public override long Length => _buffer.Length;
-        public override long Position
-        {
-            get => _buffer.Position;
-            set => _buffer.Position = value;
-        }
+        public override long Length => _textBuffer.Length;
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
-
     }
 }

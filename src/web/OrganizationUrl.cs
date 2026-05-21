@@ -1,4 +1,5 @@
-﻿using System.Web;
+using System;
+using System.Web;
 
 namespace Loom
 {
@@ -6,11 +7,14 @@ namespace Loom
     {
         /// <summary>
         /// Prepends a root-relative path with the organization slug (i.e., tenant account).
+        /// Pass <paramref name="organizationSlug"/> to force a tenant; otherwise the slug
+        /// is read from <paramref name="context"/>.Items.
         /// </summary>
-        public static string Resolve(string relativePath, string organizationSlug = null)
+        public static string Resolve(HttpContextBase context, string relativePath, string organizationSlug = null)
         {
-            var organization = organizationSlug ??
-                HttpContext.Current.Items[OrganizationResolver.SlugItemKey] as string;
+            if (relativePath == null) throw new ArgumentNullException(nameof(relativePath));
+
+            var organization = organizationSlug ?? ReadSlug(context);
 
             var cleanPath = relativePath.TrimStart('~', '/');
 
@@ -20,11 +24,22 @@ namespace Loom
         /// <summary>
         /// Returns an absolute URL resolved to the current organization account.
         /// </summary>
-        public static string ResolveAbsolute(string relativePath, string organizationSlug = null)
+        public static string ResolveAbsolute(HttpContextBase context, string relativePath, string organizationSlug = null)
         {
-            var request = HttpContext.Current.Request;
+            if (context == null) throw new ArgumentNullException(nameof(context));
 
-            return $"{request.Url.Scheme}://{request.Url.Host}{Resolve(relativePath, organizationSlug)}";
+            var request = context.Request;
+
+            return $"{request.Url.Scheme}://{request.Url.Host}{Resolve(context, relativePath, organizationSlug)}";
+        }
+
+        private static string ReadSlug(HttpContextBase context)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context),
+                    "An HttpContextBase is required when no organization slug is supplied explicitly.");
+
+            return context.Items[OrganizationResolver.SlugItemKey] as string;
         }
     }
 }

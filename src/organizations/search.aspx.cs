@@ -1,13 +1,16 @@
-﻿using System;
+using System;
+using System.Web;
 
 namespace Loom
 {
     public partial class Search : System.Web.UI.Page
     {
-        private WebOrganizationContext OrganizationContext = new WebOrganizationContext();
+        private IOrganizationContext OrganizationContext;
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            OrganizationContext = new WebOrganizationContext(new HttpContextWrapper(Context));
+
             OrganizationRepeater.DataSource = OrganizationCache.GetAll();
             OrganizationRepeater.DataBind();
         }

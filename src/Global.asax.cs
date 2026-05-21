@@ -17,12 +17,12 @@ namespace Loom
         {
             System.Diagnostics.Debug.WriteLine($"BeginRequest: {Request.Url.AbsolutePath}");
 
-            OrganizationResolver.Resolve(Request, Response);
+            OrganizationResolver.Resolve(new HttpContextWrapper(Context));
         }
 
         protected void Application_PostRequestHandlerExecute(object sender, EventArgs e)
         {
-            var slug = HttpContext.Current.Items[OrganizationResolver.SlugItemKey] as string;
+            var slug = Context.Items[OrganizationResolver.SlugItemKey] as string;
 
             var isMissingSlug = string.IsNullOrEmpty(slug);
 

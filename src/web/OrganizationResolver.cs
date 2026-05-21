@@ -52,11 +52,16 @@ namespace Loom
             var _ = RemoteDomain;
         }
 
-        public static void Resolve(HttpRequest request, HttpResponse response)
+        public static void Resolve(HttpContextBase context)
         {
+            if (context == null) throw new System.ArgumentNullException(nameof(context));
+
+            var request = context.Request;
+            var response = context.Response;
+
             // Already resolved in this request cycle (internal rewrite)
 
-            if (HttpContext.Current.Items.Contains(SlugItemKey))
+            if (context.Items.Contains(SlugItemKey))
                 return;
 
             var slug = request.ServerVariables[SlugServerVariable];
@@ -92,35 +97,35 @@ namespace Loom
                             ? $"{request.Url.Scheme}://{targetHost}/{organization}"
                             : $"{request.Url.Scheme}://{targetHost}/{organization}/{path}";
 
-                        RedirectAndComplete(response, redirectUrl);
+                        RedirectAndComplete(context, redirectUrl);
                         return;
                     }
                 }
 
-                var url = OrganizationUrl.Resolve("~/context-missing", OrganizationCache.EmptySlug);
+                var url = OrganizationUrl.Resolve(context, "~/context-missing", OrganizationCache.EmptySlug);
 
-                RedirectAndComplete(response, url);
+                RedirectAndComplete(context, url);
 
                 return;
             }
 
             if (!OrganizationCache.IsValidOrganization(slug))
             {
-                var url = OrganizationUrl.Resolve("~/context-invalid", OrganizationCache.EmptySlug)
+                var url = OrganizationUrl.Resolve(context, "~/context-invalid", OrganizationCache.EmptySlug)
                           + $"?requested={HttpUtility.UrlEncode(slug)}";
 
-                RedirectAndComplete(response, url);
+                RedirectAndComplete(context, url);
 
                 return;
             }
 
-            HttpContext.Current.Items[SlugItemKey] = slug;
+            context.Items[SlugItemKey] = slug;
         }
 
-        private static void RedirectAndComplete(HttpResponse response, string url)
+        private static void RedirectAndComplete(HttpContextBase context, string url)
         {
-            response.Redirect(url, false);
-            HttpContext.Current.ApplicationInstance.CompleteRequest();
+            context.Response.Redirect(url, false);
+            context.ApplicationInstance.CompleteRequest();
         }
     }
 }

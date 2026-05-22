@@ -1,166 +1,152 @@
-# Loom — Improvement Plan
+# Loom — Reference-Readiness Plan
 
-Recommendations from code review of the Web Forms multitenancy prototype. Ordered by impact within each category.
+Second-pass review after initial improvements landed. Frame: code is correct for a prototype; gaps below matter when this becomes a template that other teams copy for a larger multitenancy initiative.
 
-## Bugs
+## Critical (blocks real deployment)
 
-### 1. Response filter attaches for `empty` slug
+### 1. HTTPS redirect ignores `X-Forwarded-Proto`
 
-**File:** `src/Global.asax.cs:23-32`
+**File:** `src/Web.config:33-41`
 
-`isMissingSlug` is `false` when the resolved slug equals `OrganizationCache.EmptySlug` (`"empty"`). The filter then rewrites links on error pages — for example, `href="/about"` becomes `href="/empty/about"`. Error pages should not be rewritten.
+Behind any TLS-terminating proxy (Azure App Service, AWS ALB, nginx, CloudFront), `{HTTPS}=OFF` on the backend. The rule will permanent-redirect every request, producing a loop. Critical because every team copying this hits it the moment they deploy behind real infrastructure.
 
-**Fix:** Skip the filter when `slug == OrganizationCache.EmptySlug`.
+**Fix:** Add a condition that skips the redirect when `HTTP_X_FORWARDED_PROTO=https`. Document the requirement in `README.md`.
 
-### 2. `OrganizationResolver.RemoteDomain` throws on missing config
-
-**File:** `src/web/OrganizationResolver.cs:18`
-
-`ConfigurationManager.AppSettings["Loom.RemoteDomain"]` returns `null` when the key is missing. `.ToLower()` then throws `NullReferenceException` during static initialization, which crashes the app pool on every request.
-
-**Fix:** Validate the setting on startup with a clear error, or fall back safely. Use `ToLowerInvariant()` for culture safety.
-
-### 3. `IsValidOrganization` inconsistent with cache
-
-**File:** `src/state/OrganizationCache.cs:71-74`
-
-`IsValidOrganization` scans the `Slugs` array, but `Organizations` dictionary also holds `empty`. Two sources of truth. The check excludes `empty` correctly today but only by accident of how `Slugs` was initialized.
-
-**Fix:** `return Organizations.ContainsKey(slug) && slug != EmptySlug;`
-
-### 4. `Response.Redirect(url, true)` throws ThreadAbortException
-
-**File:** `src/web/OrganizationResolver.cs:64, 71, 81`
-
-`endResponse=true` raises `ThreadAbortException`. Costly and noisy in logs.
-
-**Fix:** `Response.Redirect(url, false); HttpContext.Current.ApplicationInstance.CompleteRequest();`
-
-### 5. Hardcoded UTF-8 in response filter
-
-**File:** `src/state/OrganizationUrlResponseFilter.cs:56, 61`
-
-Ignores `Response.ContentEncoding`. Breaks non-UTF-8 pages.
-
-**Fix:** Capture `Response.ContentEncoding` in the constructor; use it for both decode and encode.
-
-## Security
-
-### 6. XSS pattern in code-behind
-
-**Files:** `src/about.aspx.cs:16`, `src/default.aspx.cs:17`
-
-`InnerHtml = "About the " + span` concatenates un-encoded cache values into HTML. Today's cache values are safe, but the pattern invites injection when the cache loads from a database.
-
-**Fix:** `HttpUtility.HtmlEncode(name)` and validate `color` against a whitelist (or use a CSS class instead of inline style).
-
-### 7. No HTTPS enforcement
+### 2. No `customErrors` configured
 
 **File:** `src/Web.config`
 
-No HSTS header, no HTTP-to-HTTPS redirect. Acceptable for the prototype, mandatory for production.
+Default ASP.NET shows yellow stack-trace pages on remote clients in some configurations. Information disclosure.
 
-**Fix:** Add a URL Rewrite rule to redirect HTTP to HTTPS and an `<add name="Strict-Transport-Security" ...>` custom header.
+**Fix:** `<system.web><customErrors mode="RemoteOnly" defaultRedirect="/context-invalid" /></system.web>`, or wire a dedicated error page.
 
-### 8. Hardcoded demo data in `Default.aspx.cs`
+### 3. `Application_Error` is empty
 
-**File:** `src/default.aspx.cs:23`
+**File:** `src/Global.asax.cs:43-47`
 
-The string `"indigo."` is baked into production code. Demo data should not live in the request path.
+Unhandled exceptions vanish. For a reference codebase, the minimum is: capture, log, present a tenant-aware error page.
 
-**Fix:** Move to app settings or remove. Treat as a demo-only artifact.
+**Fix:** Log the exception via the chosen logger and transfer to an error page.
 
-## Design
+### 4. Reserved-path collision risk
 
-### 9. `OrganizationResolver` is not marked `static`
+**Files:** `src/Web.config` (rewrite rules), `src/state/OrganizationCache.cs`
 
-**File:** `src/web/OrganizationResolver.cs:10`
+IIS rewrite captures `^([^/]+)` as a tenant. Nothing prevents a tenant slug from being `about`, `default`, `css`, `img`, `organizations`. Onboarding `about` shadows the about page. No shared reserved-name list. The path-rewrite rule only excludes `context-missing|context-invalid`.
 
-All members are static. Mark the class `static` to communicate intent and prevent instantiation.
+**Fix:** Define `OrganizationCache.ReservedSlugs` (set). Enforce at: cache build (reject seed clashes), `IsValidOrganization` (reject reserved at lookup), and the IIS exclusion pattern.
 
-### 10. `OrganizationSettings` is mutable
+## High (shapes downstream code patterns)
 
-**File:** `src/state/OrganizationSettings.cs`
+### 5. No test project
 
-Cached entries can be mutated by any caller. Make immutable via init-only setters or a constructor.
+Zero coverage. Reference codebases that ship without tests teach teams it is optional.
 
-### 11. `SlugVariable` const reused for two distinct keys
+**Fix:** Add an xUnit project. Minimum surface:
 
-**File:** `src/web/OrganizationResolver.cs:12`
+- `OrganizationResolver` — subdomain redirect, missing/invalid slug paths, already-resolved short-circuit.
+- `OrganizationUrlResponseFilter` — regex positive/negative cases, multi-chunked `Write`, encoding boundaries.
+- `OrganizationUrl.Resolve` — slug from context, explicit slug override, query-string handling.
+- `OrganizationCache.Reload` — atomic swap, `Reloaded` event firing.
 
-Same string identifies both the IIS server variable and the `HttpContext.Items` key. Split into `SlugServerVariable` and `SlugItemKey`.
+### 6. Page boilerplate repeats context construction
 
-### 12. Filter rebuilds slug list and regex per request
+**Files:** `src/about.aspx.cs`, `src/default.aspx.cs`, `src/organizations/search.aspx.cs`
 
-**File:** `src/state/OrganizationUrlResponseFilter.cs:21-34`
+Every page does `_orgContext = new WebOrganizationContext(new HttpContextWrapper(Context));`. Three repetitions today, dozens once scaled.
 
-`OrganizationCache.GetAll()`, `Concat`, and `new Regex(...)` run for every response. Move to `static readonly` fields (with a one-time build).
+**Fix:** Introduce `LoomPage : Page` base class with `protected IOrganizationContext OrgContext { get; }` initialized in `OnInit`. Pages inherit; the boilerplate disappears.
 
-### 13. `OrganizationCache` has no refresh path
+### 7. Slug validation rules diverge across the codebase
 
-**File:** `src/state/OrganizationCache.cs`
+- IIS rewrite: `[^/]+` (anything but `/`)
+- `LegacySubdomainPattern`: `[a-z0-9-]+`
+- `OrganizationCache.IsValidOrganization`: dictionary key membership
 
-README notes that production will load from a database. The current static initialization requires a process restart to pick up new tenants. Plan a `Reload()` method or a `Lazy<ConcurrentDictionary>` with a TTL.
+A tenant `My_Org` passes IIS rewrite, passes cache lookup, fails subdomain match.
 
-### 14. `HttpContext.Current` accessed directly in services
+**Fix:** Pick one canonical slug format (e.g., `^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$`). Enforce at onboarding. Use the same pattern everywhere.
 
-**Files:** `src/web/WebOrganizationContext.cs`, `src/web/OrganizationUrl.cs`
+### 8. Resolver does not pre-cache settings into Items
 
-Couples the helpers to the runtime, blocks unit tests. Inject `HttpContextBase` or pass context explicitly at the call site.
+**Files:** `src/web/OrganizationResolver.cs:122`, `src/web/WebOrganizationContext.cs`
 
-## Performance / correctness
+`Resolve` stores slug only. `WebOrganizationContext.GetSettings()` looks up the cache lazily on first read. Race: if `OrganizationCache.Reload()` runs between resolve and read, the slug may no longer be valid, and `GetBySlug` throws mid-render.
 
-### 15. Response filter buffers the entire HTML body
+**Fix:** Resolver stores both slug **and** resolved `OrganizationSettings` into `HttpContext.Items` at resolve time. Page consumers read from Items; they never re-query the cache.
 
-**File:** `src/state/OrganizationUrlResponseFilter.cs`
+### 9. `OrganizationCache.Reloaded` has fragile multicast semantics
 
-Fine for small pages, broken for streaming or large responses. Either document the limit or implement chunked rewrite that handles attribute splits across buffer boundaries.
+**File:** `src/state/OrganizationCache.cs:29, 42`
 
-### 16. `Stream.Close` override is deprecated; unused members on a write-only stream
+A throwing subscriber silently aborts later subscribers. With one subscriber today (the filter), invisible. With more subscribers, derived state desyncs.
 
-**File:** `src/state/OrganizationUrlResponseFilter.cs:47`
+**Fix:** Replace `Reloaded?.Invoke()` with an explicit foreach over `GetInvocationList()`, wrapping each call in try/catch and surfacing failures to a logger.
 
-Override `Dispose(bool)` instead. Drop `Length`, `Position`, `Seek`, `SetLength` — the filter is write-only.
+## Medium
 
-### 17. `Debug.WriteLine` on every request
+### 10. `OrganizationCache.GetBySlug` throws the wrong exception
 
-**File:** `src/Global.asax.cs:16`
+**File:** `src/state/OrganizationCache.cs:58`
 
-Noise. Remove or wrap in `#if DEBUG` only when actively debugging.
+`ArgumentOutOfRangeException` for a lookup miss. Use `KeyNotFoundException` — semantically correct, distinguishable in catch blocks.
 
-### 18. `Slugs.Contains(slug)` linear scan
+### 11. `ToTitleCase` is culture-sensitive
 
-**File:** `src/state/OrganizationCache.cs:73`
+**Files:** `src/state/OrganizationCache.cs:101`, `src/default.aspx.cs:38`
 
-Trivial at seven slugs, O(n) at production scale. Use `HashSet<string>` or check the dictionary directly (see #3).
+`char.ToUpper`/`.ToLower` use the current culture. Turkish locale produces `İ` for `i`.
 
-## Build / project
+**Fix:** Use `ToUpperInvariant` / `ToLowerInvariant`.
 
-### 19. Old-style `packages.config` + non-SDK csproj
+### 12. Demo code bleeds into the reference home page
 
-**Files:** `src/Loom.csproj`, `src/packages.config`
+**File:** `src/default.aspx.cs`
 
-Migrate to SDK-style project with `PackageReference`. Still targets `net48`, less ceremony.
+Even with the config-driven gate, `ConfigureSubdomainDemoLink` is reference-template noise. Teams will copy `Default.aspx` as their template and inherit the demo wiring.
 
-### 20. `bin/` and `obj/` historically tracked
+**Fix:** Move the demo to a separate sample/demo area, or strip it from the template and document separately.
 
-**Files:** `src/bin/`, `src/obj/`
+## Lower
 
-DLLs and compiler caches are in the repo despite being gitignored now. Remove with `git rm -r --cached src/bin src/obj` and commit.
+### 13. No skip list for non-tenant paths
 
-### 21. No test project
+**File:** `src/web/OrganizationResolver.cs`
 
-`IOrganizationContext` exists for testability but has no tests against it. Add an xUnit project covering:
+`Resolve` runs in `BeginRequest` for every managed request. Future `/health`, `/api/*`, `/metrics` will hit tenant resolution and 302 to context-missing.
 
-- `OrganizationResolver` subdomain redirect logic
-- `OrganizationUrlResponseFilter` regex (positive and negative cases, including `empty` slug)
-- `OrganizationUrl.Resolve` edge cases
+**Fix:** Define a convention (e.g., paths starting with `/_`, or a configurable allowlist) and short-circuit at the top of `Resolve`.
 
-## Execution order
+### 14. Health endpoint convention not defined
 
-1. Fix #1 — silent rewrite bug on error pages
-2. Fix #2 — config validation
-3. Fix #4 — redirect mechanics
-4. #20 — strip tracked `bin/`/`obj/`
-5. #10, #9 — immutability and `static` markers
-6. Remaining items as scope allows
+Path-based multitenancy makes this ambiguous. `/healthz` global vs. `/{slug}/healthz` per-tenant.
+
+**Fix:** Decide and document in the README so the larger initiative starts coherent.
+
+### 15. `IOrganizationContext` is anemic
+
+**File:** `src/state/IOrganizationContext.cs`
+
+`Slug` + `Settings`. Real-world tenant context typically also needs `IsActive`, feature flags, connection-string resolver, audit identity.
+
+**Fix:** Either expand the interface or document the extension seam.
+
+### 16. Stack noise: empty event handlers in Global.asax
+
+**File:** `src/Global.asax.cs:37-62`
+
+`Application_End`, `Session_Start`, `Session_End` are empty templates with placeholder comments. Reference code with cargo-cult placeholders invites cargo-culting in copies.
+
+**Fix:** Remove or fill with intentional behavior.
+
+### 17. `EnsureConfigured` uses `var _ = RemoteDomain`
+
+**File:** `src/web/OrganizationResolver.cs:52`
+
+That `_` is a variable named underscore, not a discard. Works, but `_ = RemoteDomain;` reads cleaner.
+
+## Top-3 to land before this becomes the template
+
+1. **#1 X-Forwarded-Proto** — anyone deploying behind a proxy hits this immediately.
+2. **#6 `LoomPage` base class** — sets the pattern future pages will copy.
+3. **#5 tests + #8 settings pre-cache** — pair naturally; tests will surface the race.

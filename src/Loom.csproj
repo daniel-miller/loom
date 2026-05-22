@@ -71,6 +71,7 @@
     <Content Include="default.aspx" />
     <Content Include="Global.asax" />
     <Content Include="context-missing.aspx" />
+    <Content Include="healthz.aspx" />
     <Content Include="img\icons\android-chrome-192x192.png" />
     <Content Include="img\icons\android-chrome-512x512.png" />
     <Content Include="img\icons\apple-touch-icon.png" />
@@ -114,6 +115,13 @@
     </Compile>
     <Compile Include="context-missing.aspx.designer.cs">
       <DependentUpon>context-missing.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="healthz.aspx.cs">
+      <DependentUpon>healthz.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="healthz.aspx.designer.cs">
+      <DependentUpon>healthz.aspx</DependentUpon>
     </Compile>
     <Compile Include="tenants\TenantPage.cs" />
     <Compile Include="tenants\home.aspx.cs">

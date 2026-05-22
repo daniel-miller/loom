@@ -64,16 +64,18 @@ namespace Loom
             if (context.Items.Contains(SlugItemKey))
                 return;
 
-            // GitHub-style convention: the first URL segment is either a tenant slug
-            // or a reserved app-scope path. Reserved paths resolve with no tenant
-            // context and skip the rest of resolution.
-            if (IsReservedFirstSegment(request.Url))
-                return;
-
             var slug = request.ServerVariables[SlugServerVariable];
 
             if (string.IsNullOrEmpty(slug))
             {
+                // GitHub-style convention: when IIS did not set a tenant slug, the
+                // first URL segment may be a reserved app-scope path. Reserved paths
+                // resolve in app-scope (no tenant context). This check runs only on
+                // the no-slug branch because IIS would not have skipped the rewrite
+                // for a tenant request.
+                if (IsReservedFirstSegment(request.Url))
+                    return;
+
                 // Check for legacy subdomain pattern: environment-organization.example.com
 
                 var host = request.Url.Host;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Web;
 using System.Web.Routing;
+using Loom.Diagnostics;
 
 namespace Loom
 {
@@ -46,14 +47,11 @@ namespace Loom
             var slug = Context.Items[OrganizationResolver.SlugItemKey] as string;
             var path = Request?.Url?.PathAndQuery ?? "(no request url)";
 
-            System.Diagnostics.Trace.TraceError(
-                "Unhandled exception. tenant={0} path={1} type={2} message={3}{4}{5}",
+            LoomLog.Current.Error(
+                "Unhandled exception. tenant={0} path={1}",
+                ex,
                 string.IsNullOrEmpty(slug) ? "(none)" : slug,
-                path,
-                ex.GetType().FullName,
-                ex.Message,
-                Environment.NewLine,
-                ex);
+                path);
 
             // Let ASP.NET continue to the configured customErrors handler.
         }

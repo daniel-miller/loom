@@ -145,6 +145,9 @@
     <Compile Include="tenants\organizations\search.aspx.designer.cs">
       <DependentUpon>search.aspx</DependentUpon>
     </Compile>
+    <Compile Include="diagnostics\ILoomLogger.cs" />
+    <Compile Include="diagnostics\LoomLog.cs" />
+    <Compile Include="diagnostics\TraceLogger.cs" />
     <Compile Include="web\WebOrganizationContext.cs" />
     <Compile Include="state\IOrganizationContext.cs" />
     <Compile Include="state\OrganizationCache.cs" />

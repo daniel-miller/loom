@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Loom.Diagnostics;
 
 namespace Loom
 {
@@ -185,8 +186,7 @@ namespace Loom
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Trace.TraceError(
-                        "OrganizationCache.Reloaded subscriber threw: {0}", ex);
+                    LoomLog.Current.Error("OrganizationCache.Reloaded subscriber threw", ex);
                 }
             }
         }

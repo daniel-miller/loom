@@ -14,18 +14,105 @@ namespace Loom
         public const string EmptySlug = "empty";
 
         /// <summary>
-        /// Slugs that collide with built-in pages or routes. A tenant cannot be created
-        /// with one of these slugs. Keep this list in sync with the IIS exclusion pattern
-        /// in Web.config (OrganizationRootRewrite / OrganizationPathRewrite rules).
+        /// Slugs that name app-scope pages or routes rather than tenants. A request to
+        /// <c>/{reserved}</c> resolves in app-scope (no tenant context); a tenant cannot
+        /// be onboarded with one of these slugs.
+        ///
+        /// Keep this list in sync with the <c>ReservedSlugs</c> rewriteMap in Web.config.
+        /// Follows the GitHub convention of a single top-level namespace shared between
+        /// tenants and app-scope paths, with a reserved-word list to disambiguate.
         /// </summary>
         public static readonly IReadOnlyCollection<string> ReservedSlugs =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
+                // Built-in pages and folders
                 "default",
                 "about",
                 "organizations",
                 "context-missing",
                 "context-invalid",
+
+                // Authentication / account
+                "account",
+                "auth",
+                "forgot-password",
+                "login",
+                "logout",
+                "oauth",
+                "register",
+                "reset-password",
+                "sessions",
+                "signin",
+                "signup",
+                "sso",
+
+                // User-scope
+                "dashboard",
+                "messages",
+                "notifications",
+                "profile",
+                "settings",
+                "users",
+
+                // App features
+                "admin",
+                "edit",
+                "explore",
+                "new",
+                "search",
+                "system",
+                "trending",
+
+                // Marketing
+                "blog",
+                "careers",
+                "contact",
+                "customer-stories",
+                "developers",
+                "docs",
+                "enterprise",
+                "faq",
+                "features",
+                "help",
+                "jobs",
+                "legal",
+                "marketplace",
+                "news",
+                "partners",
+                "plans",
+                "press",
+                "pricing",
+                "privacy",
+                "releases",
+                "security",
+                "support",
+                "terms",
+                "tour",
+
+                // Operational
+                "api",
+                "healthz",
+                "metrics",
+                "ping",
+                "status",
+
+                // Static asset roots
+                "assets",
+                "css",
+                "downloads",
+                "fonts",
+                "images",
+                "img",
+                "js",
+                "media",
+                "public",
+                "static",
+                "themes",
+
+                // Crawler files (also matched by the IIS IsFile check, listed for safety)
+                "favicon.ico",
+                "robots.txt",
+                "sitemap.xml",
             };
 
         // Seed data for the prototype. Production should pull this from a database

@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		PLAN.md = PLAN.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Loom.Tests", "tests\Loom.Tests\Loom.Tests.csproj", "{B1A8C8F1-5A4D-4E9F-9E1B-1234567890AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A56F67F7-0C82-4203-AB4B-D7C7AE4CBA0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A56F67F7-0C82-4203-AB4B-D7C7AE4CBA0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A56F67F7-0C82-4203-AB4B-D7C7AE4CBA0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1A8C8F1-5A4D-4E9F-9E1B-1234567890AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1A8C8F1-5A4D-4E9F-9E1B-1234567890AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1A8C8F1-5A4D-4E9F-9E1B-1234567890AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1A8C8F1-5A4D-4E9F-9E1B-1234567890AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

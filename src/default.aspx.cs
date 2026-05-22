@@ -35,7 +35,7 @@ namespace Loom
             var domain = ConfigurationManager.AppSettings["Loom.RemoteDomain"];
 
             IndigoAnchor.HRef = $"{Request.Url.Scheme}://{subdomain}{domain}";
-            IndigoAnchor.InnerText = $"Navigate to the {char.ToUpper(demoSlug[0]) + demoSlug.Substring(1)} organization (absolute URL)";
+            IndigoAnchor.InnerText = $"Navigate to the {char.ToUpperInvariant(demoSlug[0]) + demoSlug.Substring(1)} organization (absolute URL)";
         }
     }
 }

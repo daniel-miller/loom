@@ -125,7 +125,7 @@ namespace Loom
             for (int i = 0; i < words.Length; i++)
             {
                 if (words[i].Length > 0)
-                    words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
+                    words[i] = char.ToUpperInvariant(words[i][0]) + words[i].Substring(1).ToLowerInvariant();
             }
 
             return string.Join(" ", words);

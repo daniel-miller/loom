@@ -54,7 +54,28 @@ namespace Loom
 
             Interlocked.Exchange(ref _organizations, fresh);
 
-            Reloaded?.Invoke();
+            RaiseReloaded();
+        }
+
+        private static void RaiseReloaded()
+        {
+            var handlers = Reloaded;
+            if (handlers == null) return;
+
+            // Invoke subscribers individually so one throwing handler cannot prevent
+            // the others from rebuilding their derived state.
+            foreach (Action handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    handler();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.TraceError(
+                        "OrganizationCache.Reloaded subscriber threw: {0}", ex);
+                }
+            }
         }
 
         public static OrganizationSettings[] GetAll()

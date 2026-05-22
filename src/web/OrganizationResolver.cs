@@ -64,6 +64,12 @@ namespace Loom
             if (context.Items.Contains(SlugItemKey))
                 return;
 
+            // GitHub-style convention: the first URL segment is either a tenant slug
+            // or a reserved app-scope path. Reserved paths resolve with no tenant
+            // context and skip the rest of resolution.
+            if (IsReservedFirstSegment(request.Url))
+                return;
+
             var slug = request.ServerVariables[SlugServerVariable];
 
             if (string.IsNullOrEmpty(slug))
@@ -131,6 +137,20 @@ namespace Loom
         {
             context.Response.Redirect(url, false);
             context.ApplicationInstance.CompleteRequest();
+        }
+
+        private static bool IsReservedFirstSegment(System.Uri url)
+        {
+            var path = url?.AbsolutePath;
+            if (string.IsNullOrEmpty(path) || path == "/")
+                return false;
+
+            // Extract first segment between leading '/' and the next '/' (or end).
+            var start = path[0] == '/' ? 1 : 0;
+            var end = path.IndexOf('/', start);
+            var first = end < 0 ? path.Substring(start) : path.Substring(start, end - start);
+
+            return OrganizationCache.IsReservedSlug(first);
         }
     }
 }

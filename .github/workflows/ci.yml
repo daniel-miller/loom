@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        # Loom.csproj is a legacy ASP.NET Web Application that requires VS MSBuild
+        # (Microsoft.WebApplication.targets). dotnet build cannot load it.
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up NuGet
+        uses: nuget/setup-nuget@v2
+
+      - name: Set up VSTest
+        uses: darenm/Setup-VSTest@v1.3
+
+      - name: Restore packages
+        run: nuget restore loom.sln
+
+      - name: Build solution
+        run: msbuild loom.sln /p:Configuration=Release /p:Platform="Any CPU" /m
+
+      - name: Run tests
+        run: vstest.console.exe tests\Loom.Tests\bin\Release\net48\Loom.Tests.dll /logger:trx /ResultsDirectory:TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/

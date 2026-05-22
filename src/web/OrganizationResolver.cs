@@ -30,7 +30,9 @@ namespace Loom
         private static readonly string RemoteDomain = LoadRemoteDomain();
 
         private static readonly Regex LegacySubdomainPattern = new Regex(
-            @"^(?<environment>(?:local|sandbox|dev)-)?(?<organization>[a-z0-9-]+)\." + Regex.Escape(RemoteDomain) + "$",
+            @"^(?<environment>(?:local|sandbox|dev)-)?(?<organization>"
+                + OrganizationCache.SlugPatternSource
+                + @")\." + Regex.Escape(RemoteDomain) + "$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static string LoadRemoteDomain()

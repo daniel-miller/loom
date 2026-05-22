@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Loom
@@ -12,6 +13,26 @@ namespace Loom
     public static class OrganizationCache
     {
         public const string EmptySlug = "empty";
+
+        /// <summary>
+        /// Canonical slug pattern: lowercase alphanumeric and hyphens, 1-39 characters,
+        /// no leading or trailing hyphen. Single source of truth shared with the legacy
+        /// subdomain matcher in <see cref="OrganizationResolver"/>.
+        /// </summary>
+        public const string SlugPatternSource = "[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?";
+
+        private static readonly Regex SlugPattern = new Regex(
+            "^" + SlugPatternSource + "$",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// True when <paramref name="slug"/> matches the canonical slug format.
+        /// Format-only check; does not consult the cache or the reserved list.
+        /// </summary>
+        public static bool IsValidSlugFormat(string slug)
+        {
+            return !string.IsNullOrEmpty(slug) && SlugPattern.IsMatch(slug);
+        }
 
         /// <summary>
         /// Slugs that name app-scope pages or routes rather than tenants. A request to
@@ -194,6 +215,9 @@ namespace Loom
             if (IsReservedSlug(slug))
                 return false;
 
+            if (!IsValidSlugFormat(slug))
+                return false;
+
             return _organizations.ContainsKey(slug);
         }
 
@@ -210,6 +234,10 @@ namespace Loom
 
             foreach (var slug in SeedSlugs)
             {
+                if (!IsValidSlugFormat(slug))
+                    throw new InvalidOperationException(
+                        $"Seed slug '{slug}' does not match the canonical slug format ({SlugPatternSource}).");
+
                 if (IsReservedSlug(slug))
                     throw new InvalidOperationException(
                         $"Seed slug '{slug}' collides with a reserved path. Rename the seed or remove the reservation.");

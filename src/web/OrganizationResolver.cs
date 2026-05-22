@@ -1,6 +1,11 @@
-﻿using System.Configuration;
+﻿using System.Collections.Generic;
+using System.Configuration;
+using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
+using System.Web.Hosting;
+using System.Xml;
 
 namespace Loom
 {
@@ -50,6 +55,71 @@ namespace Loom
             // Touching the static field forces the type initializer to run,
             // which surfaces any ConfigurationErrorsException at startup.
             var _ = RemoteDomain;
+
+            EnsureReservedSlugsInSyncWithWebConfig();
+        }
+
+        /// <summary>
+        /// Verifies that <see cref="OrganizationCache.ReservedSlugs"/> matches the
+        /// <c>ReservedSlugs</c> rewriteMap in Web.config. Reservation must agree at both
+        /// layers; drift would silently let one layer treat a name as a tenant while the
+        /// other treats it as app-scope.
+        /// </summary>
+        private static void EnsureReservedSlugsInSyncWithWebConfig()
+        {
+            var iisKeys = ReadReservedSlugsRewriteMap();
+
+            var codeKeys = new HashSet<string>(
+                OrganizationCache.ReservedSlugs,
+                System.StringComparer.OrdinalIgnoreCase);
+
+            var missingFromIis = codeKeys.Except(iisKeys, System.StringComparer.OrdinalIgnoreCase).ToArray();
+            var missingFromCode = iisKeys.Except(codeKeys, System.StringComparer.OrdinalIgnoreCase).ToArray();
+
+            if (missingFromIis.Length == 0 && missingFromCode.Length == 0)
+                return;
+
+            var detail = new System.Text.StringBuilder();
+            detail.Append("OrganizationCache.ReservedSlugs is out of sync with the ReservedSlugs rewriteMap in Web.config.");
+
+            if (missingFromIis.Length > 0)
+                detail.Append(" Missing from Web.config: ").Append(string.Join(", ", missingFromIis)).Append('.');
+
+            if (missingFromCode.Length > 0)
+                detail.Append(" Missing from OrganizationCache.ReservedSlugs: ").Append(string.Join(", ", missingFromCode)).Append('.');
+
+            throw new ConfigurationErrorsException(detail.ToString());
+        }
+
+        private static HashSet<string> ReadReservedSlugsRewriteMap()
+        {
+            var keys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+
+            var webConfigPath = Path.Combine(
+                HostingEnvironment.ApplicationPhysicalPath ?? System.AppDomain.CurrentDomain.BaseDirectory,
+                "Web.config");
+
+            if (!File.Exists(webConfigPath))
+                throw new ConfigurationErrorsException($"Web.config not found at '{webConfigPath}'.");
+
+            var doc = new XmlDocument();
+            doc.Load(webConfigPath);
+
+            var nodes = doc.SelectNodes(
+                "/configuration/system.webServer/rewrite/rewriteMaps/rewriteMap[@name='ReservedSlugs']/add");
+
+            if (nodes == null || nodes.Count == 0)
+                throw new ConfigurationErrorsException(
+                    "Web.config is missing the <rewriteMap name=\"ReservedSlugs\"> entry expected by OrganizationResolver.");
+
+            foreach (XmlNode node in nodes)
+            {
+                var key = node.Attributes?["key"]?.Value;
+                if (!string.IsNullOrEmpty(key))
+                    keys.Add(key);
+            }
+
+            return keys;
         }
 
         public static void Resolve(HttpContextBase context)

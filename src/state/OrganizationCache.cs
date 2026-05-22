@@ -19,10 +19,15 @@ namespace Loom
         /// be onboarded with one of these slugs.
         ///
         /// Keep this list in sync with the <c>ReservedSlugs</c> rewriteMap in Web.config.
+        /// <see cref="OrganizationResolver.EnsureConfigured"/> validates the two lists
+        /// match at startup.
+        ///
         /// Follows the GitHub convention of a single top-level namespace shared between
         /// tenants and app-scope paths, with a reserved-word list to disambiguate.
         /// </summary>
-        public static readonly IReadOnlyCollection<string> ReservedSlugs =
+        public static IReadOnlyCollection<string> ReservedSlugs => _reservedSlugs;
+
+        private static readonly HashSet<string> _reservedSlugs =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 // Built-in pages and folders
@@ -194,12 +199,14 @@ namespace Loom
 
         public static bool IsReservedSlug(string slug)
         {
-            return slug != null && ((HashSet<string>)ReservedSlugs).Contains(slug);
+            return slug != null && _reservedSlugs.Contains(slug);
         }
 
         private static ConcurrentDictionary<string, OrganizationSettings> Load()
         {
-            var dict = new ConcurrentDictionary<string, OrganizationSettings>();
+            // Case-insensitive so /RED, /Red, and /red all map to the same tenant
+            // and align with the case-insensitive ReservedSlugs comparison.
+            var dict = new ConcurrentDictionary<string, OrganizationSettings>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var slug in SeedSlugs)
             {

@@ -1,7 +1,7 @@
 using System;
 using System.Web;
 
-namespace Loom
+namespace Loom.Tenants
 {
     public partial class Search : System.Web.UI.Page
     {

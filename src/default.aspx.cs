@@ -1,41 +1,16 @@
-﻿using System;
-using System.Configuration;
-using System.Web;
+using System;
 using System.Web.UI;
 
 namespace Loom
 {
+    /// <summary>
+    /// App-scope landing page served at <c>/</c>. Renders without a tenant context.
+    /// Tenant home lives at <c>/{slug}</c> and is handled by <see cref="Loom.Tenants.TenantHome"/>.
+    /// </summary>
     public partial class Default : Page
     {
-        private const string DemoSubdomainSlugKey = "Loom.Demo.SubdomainOrganizationSlug";
-
-        private IOrganizationContext _orgContext;
-
         protected void Page_Load(object sender, EventArgs e)
         {
-            _orgContext = new WebOrganizationContext(new HttpContextWrapper(Context));
-
-            MainHeading.InnerHtml = "Welcome to the " + OrganizationHtml.ColoredName(_orgContext.Settings);
-
-            ConfigureSubdomainDemoLink();
-        }
-
-        private void ConfigureSubdomainDemoLink()
-        {
-            var demoSlug = ConfigurationManager.AppSettings[DemoSubdomainSlugKey];
-
-            if (string.IsNullOrWhiteSpace(demoSlug) || !OrganizationCache.IsValidOrganization(demoSlug))
-            {
-                IndigoAnchor.Visible = false;
-                return;
-            }
-
-            var subdomain = Request.IsLocal ? $"local-{demoSlug}." : $"{demoSlug}.";
-
-            var domain = ConfigurationManager.AppSettings["Loom.RemoteDomain"];
-
-            IndigoAnchor.HRef = $"{Request.Url.Scheme}://{subdomain}{domain}";
-            IndigoAnchor.InnerText = $"Navigate to the {char.ToUpperInvariant(demoSlug[0]) + demoSlug.Substring(1)} organization (absolute URL)";
         }
     }
 }

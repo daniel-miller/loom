@@ -77,7 +77,9 @@
     <Content Include="img\icons\favicon-16x16.png" />
     <Content Include="img\icons\favicon-32x32.png" />
     <Content Include="img\icons\favicon.ico" />
-    <Content Include="organizations\search.aspx" />
+    <Content Include="tenants\home.aspx" />
+    <Content Include="tenants\about.aspx" />
+    <Content Include="tenants\organizations\search.aspx" />
     <Content Include="css\theme.css" />
     <Content Include="Web.config" />
   </ItemGroup>
@@ -113,17 +115,31 @@
     <Compile Include="context-missing.aspx.designer.cs">
       <DependentUpon>context-missing.aspx</DependentUpon>
     </Compile>
+    <Compile Include="tenants\home.aspx.cs">
+      <DependentUpon>home.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="tenants\home.aspx.designer.cs">
+      <DependentUpon>home.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="tenants\about.aspx.cs">
+      <DependentUpon>about.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="tenants\about.aspx.designer.cs">
+      <DependentUpon>about.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="tenants\organizations\search.aspx.cs">
+      <DependentUpon>search.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="tenants\organizations\search.aspx.designer.cs">
+      <DependentUpon>search.aspx</DependentUpon>
+    </Compile>
     <Compile Include="web\WebOrganizationContext.cs" />
     <Compile Include="state\IOrganizationContext.cs" />
     <Compile Include="state\OrganizationCache.cs" />
     <Compile Include="web\OrganizationResolver.cs" />
-    <Compile Include="organizations\search.aspx.cs">
-      <DependentUpon>search.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="organizations\search.aspx.designer.cs">
-      <DependentUpon>search.aspx</DependentUpon>
-    </Compile>
     <Compile Include="state\OrganizationSettings.cs" />
     <Compile Include="web\OrganizationHtml.cs" />
     <Compile Include="web\OrganizationUrl.cs" />

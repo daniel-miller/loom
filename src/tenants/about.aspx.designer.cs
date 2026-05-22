@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Loom
+namespace Loom.Tenants
 {
 
 
@@ -15,5 +15,7 @@ namespace Loom
     {
 
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
+
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl MainHeading;
     }
 }

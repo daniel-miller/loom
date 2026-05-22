@@ -7,13 +7,15 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Loom
+namespace Loom.Tenants
 {
 
 
-    public partial class About
+    public partial class Search
     {
 
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
+
+        protected global::System.Web.UI.WebControls.Repeater OrganizationRepeater;
     }
 }

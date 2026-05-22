@@ -7,13 +7,17 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Loom
+namespace Loom.Tenants
 {
 
 
-    public partial class About
+    public partial class TenantHome
     {
 
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
+
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl MainHeading;
+
+        protected global::System.Web.UI.HtmlControls.HtmlAnchor IndigoAnchor;
     }
 }

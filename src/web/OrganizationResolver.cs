@@ -119,7 +119,12 @@ namespace Loom
                 return;
             }
 
+            // Snapshot settings now so a concurrent cache reload cannot cause a
+            // mid-request KeyNotFoundException when the page reads them.
+            var settings = OrganizationCache.GetBySlug(slug);
+
             context.Items[SlugItemKey] = slug;
+            context.Items[SettingsItemKey] = settings;
         }
 
         private static void RedirectAndComplete(HttpContextBase context, string url)

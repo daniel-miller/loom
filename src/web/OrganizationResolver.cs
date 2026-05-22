@@ -54,7 +54,7 @@ namespace Loom
         {
             // Touching the static field forces the type initializer to run,
             // which surfaces any ConfigurationErrorsException at startup.
-            var _ = RemoteDomain;
+            _ = RemoteDomain;
 
             EnsureReservedSlugsInSyncWithWebConfig();
         }
@@ -127,7 +127,6 @@ namespace Loom
             if (context == null) throw new System.ArgumentNullException(nameof(context));
 
             var request = context.Request;
-            var response = context.Response;
 
             // Already resolved in this request cycle (internal rewrite)
 

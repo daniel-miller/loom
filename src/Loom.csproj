@@ -147,6 +147,7 @@
     </Compile>
     <Compile Include="diagnostics\ILoomLogger.cs" />
     <Compile Include="diagnostics\LoomLog.cs" />
+    <Compile Include="diagnostics\RequestId.cs" />
     <Compile Include="diagnostics\TraceLogger.cs" />
     <Compile Include="web\WebOrganizationContext.cs" />
     <Compile Include="state\IOrganizationContext.cs" />

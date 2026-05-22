@@ -16,7 +16,18 @@ namespace Loom
 
         protected void Application_BeginRequest(object sender, EventArgs e)
         {
-            OrganizationResolver.Resolve(new HttpContextWrapper(Context));
+            var ctx = new HttpContextWrapper(Context);
+
+            RequestId.GetOrCreate(ctx);
+
+            OrganizationResolver.Resolve(ctx);
+        }
+
+        protected void Application_PreSendRequestHeaders(object sender, EventArgs e)
+        {
+            var id = RequestId.Current;
+            if (!string.IsNullOrEmpty(id))
+                Response.Headers[RequestId.HeaderName] = id;
         }
 
         protected void Application_PostRequestHandlerExecute(object sender, EventArgs e)
@@ -48,8 +59,9 @@ namespace Loom
             var path = Request?.Url?.PathAndQuery ?? "(no request url)";
 
             LoomLog.Current.Error(
-                "Unhandled exception. tenant={0} path={1}",
+                "Unhandled exception. requestId={0} tenant={1} path={2}",
                 ex,
+                RequestId.Current ?? "(none)",
                 string.IsNullOrEmpty(slug) ? "(none)" : slug,
                 path);
 

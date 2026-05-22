@@ -128,76 +128,79 @@ namespace Loom
         {
             if (context == null) throw new System.ArgumentNullException(nameof(context));
 
-            var request = context.Request;
-
-            // Already resolved in this request cycle (internal rewrite)
-
+            // Already resolved earlier in this request cycle (internal rewrite).
             if (context.Items.Contains(SlugItemKey))
                 return;
 
-            var slug = request.ServerVariables[SlugServerVariable];
+            var slug = context.Request.ServerVariables[SlugServerVariable];
 
             if (string.IsNullOrEmpty(slug))
             {
-                // GitHub-style convention: when IIS did not set a tenant slug, the
-                // first URL segment may be a reserved app-scope path. Reserved paths
-                // resolve in app-scope (no tenant context). This check runs only on
-                // the no-slug branch because IIS would not have skipped the rewrite
-                // for a tenant request.
-                if (IsReservedFirstSegment(request.Url))
-                    return;
-
-                // Check for legacy subdomain pattern: environment-organization.example.com
-
-                var host = request.Url.Host;
-
-                var match = LegacySubdomainPattern.Match(host);
-
-                if (match.Success)
-                {
-                    var organization = match.Groups["organization"].Value;
-
-                    if (OrganizationCache.IsValidOrganization(organization))
-                    {
-                        // Redirect to path-based URL: environment.example.com/organization
-                        // The local environment is a special case: localhost/organization
-
-                        var environment = match.Groups["environment"].Value.TrimEnd('-');
-
-                        var targetHost = string.IsNullOrEmpty(environment)
-                            ? RemoteDomain
-                            : environment == "local"
-                                ? LocalDomain
-                                : $"{environment}.{RemoteDomain}";
-
-                        var path = request.Url.PathAndQuery.TrimStart('/');
-
-                        var redirectUrl = string.IsNullOrEmpty(path)
-                            ? $"{request.Url.Scheme}://{targetHost}/{organization}"
-                            : $"{request.Url.Scheme}://{targetHost}/{organization}/{path}";
-
-                        RedirectAndComplete(context, redirectUrl);
-                        return;
-                    }
-                }
-
-                var url = OrganizationUrl.Resolve(context, "~/context-missing", OrganizationCache.EmptySlug);
-
-                RedirectAndComplete(context, url);
-
+                HandleNoSlug(context);
                 return;
             }
 
             if (!OrganizationCache.IsValidOrganization(slug))
             {
-                var url = OrganizationUrl.Resolve(context, "~/context-invalid", OrganizationCache.EmptySlug)
-                          + $"?requested={HttpUtility.UrlEncode(slug)}";
-
-                RedirectAndComplete(context, url);
-
+                RedirectToContextInvalid(context, slug);
                 return;
             }
 
+            StoreTenantContext(context, slug);
+        }
+
+        private static void HandleNoSlug(HttpContextBase context)
+        {
+            // GitHub-style convention: when IIS did not set a tenant slug, the
+            // first URL segment may be a reserved app-scope path. Reserved paths
+            // resolve in app-scope (no tenant context).
+            if (IsReservedFirstSegment(context.Request.Url))
+                return;
+
+            if (TryHandleLegacySubdomainRedirect(context))
+                return;
+
+            var url = OrganizationUrl.Resolve(context, "~/context-missing", OrganizationCache.EmptySlug);
+            RedirectAndComplete(context, url);
+        }
+
+        private static bool TryHandleLegacySubdomainRedirect(HttpContextBase context)
+        {
+            var request = context.Request;
+            var match = LegacySubdomainPattern.Match(request.Url.Host);
+            if (!match.Success) return false;
+
+            var organization = match.Groups["organization"].Value;
+            if (!OrganizationCache.IsValidOrganization(organization)) return false;
+
+            var environment = match.Groups["environment"].Value.TrimEnd('-');
+
+            var targetHost = string.IsNullOrEmpty(environment)
+                ? RemoteDomain
+                : environment == "local"
+                    ? LocalDomain
+                    : $"{environment}.{RemoteDomain}";
+
+            var path = request.Url.PathAndQuery.TrimStart('/');
+
+            var redirectUrl = string.IsNullOrEmpty(path)
+                ? $"{request.Url.Scheme}://{targetHost}/{organization}"
+                : $"{request.Url.Scheme}://{targetHost}/{organization}/{path}";
+
+            RedirectAndComplete(context, redirectUrl);
+            return true;
+        }
+
+        private static void RedirectToContextInvalid(HttpContextBase context, string requestedSlug)
+        {
+            var url = OrganizationUrl.Resolve(context, "~/context-invalid", OrganizationCache.EmptySlug)
+                      + $"?requested={HttpUtility.UrlEncode(requestedSlug)}";
+
+            RedirectAndComplete(context, url);
+        }
+
+        private static void StoreTenantContext(HttpContextBase context, string slug)
+        {
             // Snapshot settings now so a concurrent cache reload cannot cause a
             // mid-request KeyNotFoundException when the page reads them.
             var settings = OrganizationCache.GetBySlug(slug);

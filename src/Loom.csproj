@@ -115,6 +115,7 @@
     <Compile Include="context-missing.aspx.designer.cs">
       <DependentUpon>context-missing.aspx</DependentUpon>
     </Compile>
+    <Compile Include="tenants\TenantPage.cs" />
     <Compile Include="tenants\home.aspx.cs">
       <DependentUpon>home.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

@@ -332,8 +332,7 @@ var url = OrganizationUrl.Resolve("~/reports", "blue");</code></pre>
             <ul>
                 <li><a href="/red">Navigate to the Red organization</a></li>
                 <li><a href="/orange">Navigate to the Orange organization</a></li>
-                <li><a href="/blue">Navigate to the Blue organization (relative URL)</a></li>
-                <li><a runat="server" id="IndigoAnchor">Navigate to the Indigo organization (absolute URL)</a></li>
+                <li><a href="/blue">Navigate to the Blue organization</a></li>
                 <li><a href="/organizations/search">View the list of all organizations</a></li>
             </ul>
 

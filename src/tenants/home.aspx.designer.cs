@@ -17,7 +17,5 @@ namespace Loom.Tenants
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
 
         protected global::System.Web.UI.HtmlControls.HtmlGenericControl MainHeading;
-
-        protected global::System.Web.UI.HtmlControls.HtmlAnchor IndigoAnchor;
     }
 }

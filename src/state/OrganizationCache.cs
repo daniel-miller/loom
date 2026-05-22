@@ -13,6 +13,21 @@ namespace Loom
     {
         public const string EmptySlug = "empty";
 
+        /// <summary>
+        /// Slugs that collide with built-in pages or routes. A tenant cannot be created
+        /// with one of these slugs. Keep this list in sync with the IIS exclusion pattern
+        /// in Web.config (OrganizationRootRewrite / OrganizationPathRewrite rules).
+        /// </summary>
+        public static readonly IReadOnlyCollection<string> ReservedSlugs =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "default",
+                "about",
+                "organizations",
+                "context-missing",
+                "context-invalid",
+            };
+
         // Seed data for the prototype. Production should pull this from a database
         // inside an IOrganizationLoader and swap the seed call in Reload().
         private static readonly string[] SeedSlugs =
@@ -63,7 +78,15 @@ namespace Loom
             if (string.IsNullOrEmpty(slug) || slug == EmptySlug)
                 return false;
 
+            if (IsReservedSlug(slug))
+                return false;
+
             return _organizations.ContainsKey(slug);
+        }
+
+        public static bool IsReservedSlug(string slug)
+        {
+            return slug != null && ((HashSet<string>)ReservedSlugs).Contains(slug);
         }
 
         private static ConcurrentDictionary<string, OrganizationSettings> Load()
@@ -72,6 +95,10 @@ namespace Loom
 
             foreach (var slug in SeedSlugs)
             {
+                if (IsReservedSlug(slug))
+                    throw new InvalidOperationException(
+                        $"Seed slug '{slug}' collides with a reserved path. Rename the seed or remove the reservation.");
+
                 dict[slug] = Build(slug);
             }
 

@@ -1,223 +1,244 @@
 # Loom
 
-Loom is a prototype to demonstrate path-based multitenancy for ASP.NET Web Forms applications running on .NET Framework 4.8. 
+Loom is a prototype that demonstrates **path-based multitenancy** for ASP.NET Web Forms on .NET Framework 4.8. It follows the GitHub URL convention: the first segment of every URL is either a **tenant slug** or a **reserved app-scope path**, and a shared reserved-word list disambiguates the two.
 
-The first segment of every URL identifies the tenant (organization), and all application logic operates within that tenant's context.
+```
+/red                       → tenant "red" home
+/red/about                 → tenant "red" about page
+/red/organizations/search  → tenant "red" organization list
+/about                     → app-scope about (no tenant context)
+/healthz                   → app-scope health probe
+/login                     → reserved (page not implemented; 404)
+```
 
 ## Why path-based multitenancy?
 
-Multitenant applications serve multiple customers (tenants) from a single codebase. There are three common approaches to identifying tenants:
-
 | Approach | Example | Tradeoffs |
 |----------|---------|-----------|
-| **Subdomain** | `acme.example.com` | Requires wildcard DNS and SSL certificates. More complex infrastructure configuration and release management. Harder to develop locally. |
-| **Path segment** | `example.com/acme` | Single domain, standard SSL. Works easily in local development. |
+| **Subdomain** | `acme.example.com` | Wildcard DNS + SSL. Complex local development. Cookie sharing across stacks is painful. |
+| **Path segment** | `example.com/acme` | Single domain. Standard SSL. Easy local development. |
 | **Query string** | `example.com?tenant=acme` | Fragile, easily lost. Not recommended. |
 
-This prototype uses the **path segment** approach because it offers the best balance of simplicity, security, and developer experience.
-
-> **Note:** Historically, we have always used the subdomain approach for multitenant software architecture. This prototype demonstrates how an ASP.NET Web Forms application can be migrated to a path approach. This is worthwhile to consider, because it is very difficult to share authentication cookies between technology platforms such as React and ASP.NET Web Forms when one uses `localhost` and the other uses a different subdomain, such as `local-abc.example.com`.
-
-Loom also shows how incoming requests on a subdomain are automatically rerouted to use the correct path, with the subdomain removed.
+Loom uses **path segment**. Legacy subdomain URLs are automatically redirected to the canonical path form so old links keep working during migration.
 
 ## HTTP request flow
 
-Here's what happens when a browser requests `/orange/about`:
+```
+Browser requests: /red/about
+        |
+        v
++----------------------------------------------------------+
+|  IIS URL Rewrite (Web.config)                            |
+|                                                          |
+|  1. RedirectToHttps: skip when X-Forwarded-Proto=https   |
+|     or host is localhost                                 |
+|  2. TenantStaticAssetRewrite: pass static files through  |
+|     (e.g. /red/css/theme.css → css/theme.css)            |
+|  3. ReservedSlugs rewriteMap excludes /about, /login,    |
+|     /healthz, etc. from tenant rewriting                 |
+|  4. OrganizationPathRewrite: captures "red" as slug,     |
+|     rewrites to tenants/about, sets ORGANIZATION_SLUG    |
++----------------------------------------------------------+
+        |
+        v
++----------------------------------------------------------+
+|  Application_BeginRequest (Global.asax.cs)               |
+|                                                          |
+|  OrganizationResolver.Resolve(context)                   |
+|   - reads ORGANIZATION_SLUG from server variables        |
+|   - validates against OrganizationCache + reserved list  |
+|   - snapshots settings, stores both slug and settings    |
+|     in HttpContext.Items                                 |
++----------------------------------------------------------+
+        |
+        v
++----------------------------------------------------------+
+|  Page Execution: tenants/about.aspx                      |
+|                                                          |
+|  TenantPage base class instantiates WebOrganizationContext|
+|  in OnInit; the page reads OrgContext.Settings           |
++----------------------------------------------------------+
+        |
+        v
++----------------------------------------------------------+
+|  Application_PostRequestHandlerExecute (Global.asax.cs)  |
+|                                                          |
+|  Attaches OrganizationUrlResponseFilter when the slug    |
+|  is a real tenant and the response is HTML. The filter   |
+|  prefixes root-relative href/src/action URLs with the    |
+|  tenant slug as bytes stream out.                        |
++----------------------------------------------------------+
+```
+
+## Repository layout
 
 ```
-Browser requests: /orange/about
-        |
-        v
-+----------------------------------------------------------+
-|  IIS URL Rewrite Module                                  |
-|                                                          |
-|  1. Match: ^([^/]+)/(.*)$ captures "orange" and "about"  |
-|  2. Set server variable: ORGANIZATION_SLUG = "orange"    |
-|  3. Rewrite URL to: /about                               |
-+----------------------------------------------------------+
-        |
-        v
-+----------------------------------------------------------+
-|  ASP.NET Pipeline: Application_BeginRequest              |
-|                                                          |
-|  1. OrganizationResolver reads ORGANIZATION_SLUG         |
-|  2. Validates "orange" exists in OrganizationCache       |
-|  3. Stores slug in HttpContext.Current.Items             |
-+----------------------------------------------------------+
-        |
-        v
-+----------------------------------------------------------+
-|  Page Execution: About.aspx                              |
-|                                                          |
-|  1. HttpOrganizationContext reads from Items             |
-|  2. Page renders with tenant-specific data               |
-+----------------------------------------------------------+
-        |
-        v
-+----------------------------------------------------------+
-|  Response Filter: OrganizationUrlResponseFilter          |
-|                                                          |
-|  1. Scans HTML for href, src, and action attributes      |
-|  2. Rewrites root-relative URLs to include tenant        |
-|  3. Sends modified HTML to browser                       |
-+----------------------------------------------------------+
+src/
+  default.aspx                         app-scope landing (no tenant)
+  about.aspx                           app-scope about (no tenant)
+  context-missing.aspx                 error page when no slug found
+  context-invalid.aspx                 error page when slug unknown
+  Global.asax(.cs)                     pipeline wiring
+  Web.config                           rewrite rules + customErrors + HSTS
+  Loom.csproj                          legacy Web Application project
+  state/
+    IOrganizationContext.cs            tenant context abstraction
+    OrganizationSettings.cs            immutable per-tenant data
+    OrganizationCache.cs               snapshot-replaceable in-memory cache
+    OrganizationUrlResponseFilter.cs   streaming HTML URL rewriter
+  web/
+    OrganizationResolver.cs            request-time tenant resolution
+    WebOrganizationContext.cs          IOrganizationContext implementation
+    OrganizationUrl.cs                 URL builder for code-behind
+    OrganizationHtml.cs                safe HTML rendering helpers
+    RouteConfiguration.cs              FriendlyUrls registration
+  tenants/
+    TenantPage.cs                      base class for tenant-scoped pages
+    home.aspx                          tenant home (was Default.aspx)
+    about.aspx                         tenant about page
+    organizations/search.aspx          tenant list
+
+tests/
+  Loom.Tests/                          xUnit + Moq test project
 ```
 
 ## Key components
 
 | Component | Responsibility |
 |-----------|----------------|
-| `Web.config` (rewrite rules) | Extracts the tenant slug from the URL path before ASP.NET sees the request. Stores it in a server variable and rewrites the URL to remove the tenant prefix. |
-| `OrganizationResolver` | Reads the server variable, validates the tenant exists, and stores it in `HttpContext.Current.Items` for the duration of the request. If the requested tenant does not exist (or the tenant cannot be determined for the request) then the client is redirected to an error page. |
-| `HttpOrganizationContext` | Provides a clean interface for pages to access the current tenant. Implements `IOrganizationContext` for testability. |
-| `OrganizationCache` | In-memory cache of valid tenants and their settings. In production, this would load from a database on application start. |
-| `OrganizationUrl` | Helper class for generating tenant-prefixed URLs in code-behind. Use `OrganizationUrl.Resolve("~/Page")` to generate correct paths. |
-| `OrganizationUrlResponseFilter` | A response filter that automatically rewrites root-relative URLs in HTML output. This allows pages to use simple paths like `href="/about"` without manually prefixing the tenant. Long-term, all such "unresolved" paths should be removed from the UI, and then this filter can be removed. |
+| `Web.config` rewrite rules | First-line routing. Redirects HTTP→HTTPS, strips trailing slashes, passes static assets through, excludes reserved paths, captures the tenant slug into a server variable, rewrites to the matching file under `tenants/`. |
+| `OrganizationResolver` | Runs in `Application_BeginRequest`. Validates the slug, checks the reserved list, snapshots `OrganizationSettings` from the cache, stores both in `HttpContext.Items`. Also handles legacy-subdomain redirects and validates startup configuration. |
+| `OrganizationCache` | Static in-memory store with atomic `Reload()`. Holds the `ReservedSlugs` list, enforces the canonical slug format, and raises a `Reloaded` event so derived state (e.g. the response filter regex) can rebuild. |
+| `WebOrganizationContext` | Reads slug and settings from `HttpContext.Items`. Throws if the resolver did not run — never touches the cache directly, so a concurrent reload cannot affect an in-flight request. |
+| `TenantPage` | Base class for tenant-scoped `.aspx` pages. Wires the context in `OnInit` and exposes `protected IOrganizationContext OrgContext` so derived pages avoid the boilerplate. |
+| `OrganizationUrl` | Builds tenant-prefixed URLs in code-behind. Either reads the current slug from the request context or accepts an explicit slug. |
+| `OrganizationHtml` | Safe rendering helpers. HTML-encodes user-supplied names and whitelists colors against a regex (CSS keyword or hex). |
+| `OrganizationUrlResponseFilter` | Streaming write-only `Stream`. Prefixes root-relative `href`/`src`/`action` URLs with the tenant slug, splitting at `>` boundaries so attribute matches are never severed. Honors `Response.ContentEncoding` and rebuilds its regex when the cache reloads. |
 
-## URL rewrite rules in IIS
+## Reserved paths (GitHub-style convention)
 
-Three rules in `Web.config` handle URL processing:
+The first URL segment is either a tenant slug or a reserved name. `OrganizationCache.ReservedSlugs` enumerates the reserved names. The same names appear in `<rewriteMap name="ReservedSlugs">` in `Web.config`; on startup, `OrganizationResolver.EnsureConfigured` reads the rewriteMap from disk and throws if the two lists have drifted.
 
-### 1. RemoveTrailingSlash
+Categories of reserved names:
 
-Canonicalizes URLs by redirecting `/orange/` to `/orange`. This prevents duplicate content and ensures consistent URLs throughout the application.
+- Built-in pages: `default`, `about`, `organizations`, `context-missing`, `context-invalid`
+- Authentication / account: `login`, `logout`, `signin`, `signup`, `oauth`, `sso`, `sessions`, `account`, …
+- User-scope: `dashboard`, `settings`, `profile`, `notifications`, `messages`, `users`
+- App features: `admin`, `search`, `explore`, `new`, `edit`, `trending`, `system`
+- Marketing: `blog`, `pricing`, `features`, `legal`, `terms`, `privacy`, `support`, …
+- Operational: `api`, `healthz`, `metrics`, `ping`, `status`
+- Static asset roots: `css`, `js`, `img`, `images`, `fonts`, `assets`, `media`, `static`, `public`, `themes`, `downloads`
+- Crawler files: `favicon.ico`, `robots.txt`, `sitemap.xml`
 
-### 2. OrganizationRootRewrite
+Adding a reserved name requires updating both `OrganizationCache.ReservedSlugs` and the `<rewriteMap>` in `Web.config`. The startup drift check enforces this; an app pool refusing to boot is the symptom.
 
-Handles requests to the tenant root, like `/orange`. Rewrites to `Default.aspx` while capturing the slug.
+## Canonical slug format
 
-```xml
-<rule name="OrganizationRootRewrite" stopProcessing="false">
-    <match url="^([^/]+)/?$" />
-    <conditions>
-        <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-        <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-        <add input="{R:1}" pattern="\.(ico|png|jpg|...)$" negate="true" />
-    </conditions>
-    <action type="Rewrite" url="Default" />
-    <serverVariables>
-        <set name="ORGANIZATION_SLUG" value="{R:1}" />
-    </serverVariables>
-</rule>
+Defined once in `OrganizationCache.SlugPatternSource`:
+
+```
+[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?
 ```
 
-### 3. OrganizationPathRewrite
+Lowercase alphanumeric and hyphens, 1–39 characters, no leading or trailing hyphen. The `LegacySubdomainPattern` embeds the same string so subdomain matching and tenant lookup agree. `IsValidSlugFormat(string)` exposes the check for onboarding flows.
 
-Handles all other tenant requests, like `/orange/about`. Strips the tenant prefix and rewrites to the actual page path.
-
-```xml
-<rule name="OrganizationPathRewrite" stopProcessing="false">
-    <match url="^([^/]+)/(.*)$" />
-    <conditions>
-        <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
-        <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
-        <add input="{R:1}" pattern="^(ContextMissing|ContextInvalid)$" negate="true" />
-    </conditions>
-    <action type="Rewrite" url="{R:2}" />
-    <serverVariables>
-        <set name="ORGANIZATION_SLUG" value="{R:1}" />
-    </serverVariables>
-</rule>
-```
-
-> **Note:** The `ORGANIZATION_SLUG` server variable must be added to IIS's allowed server variables list. This is configured at the server level, not in `Web.config`. See the [IIS Configuration](#iis-configuration) section below.
-
-## HTTP response filter
-
-The `OrganizationUrlResponseFilter` intercepts HTML responses and rewrites root-relative URLs to include the tenant prefix. This allows developers to write simple markup without worrying about tenant paths:
-
-```html
-<!-- What you write -->
-<a href="/about">About</a>
-<img src="/images/logo.png" />
-
-<!-- What the browser receives (for tenant "orange") -->
-<a href="/orange/about">About</a>
-<img src="/orange/images/logo.png" />
-```
-
-The filter uses a regex to match `href`, `src`, and `action` attributes with root-relative paths, skipping URLs that are already prefixed or are protocol-relative.
-
-Most important, this achieves backward-compatibility by eliminating the need to find and replace all unresolved URLs in the existing UI. Unresolved URLs can be updated over time, and the application can run with both tenant-resolved and tenant-unresolved URLs.
-
-> **Limitation:** The response filter only rewrites HTML attributes. JavaScript code that constructs URLs dynamically must use the tenant prefix explicitly. Consider exposing the current tenant slug to JavaScript via a data attribute or global variable.
-
-## Accessing the current tenant context
-
-In page code-behind, use `HttpOrganizationContext`:
-
-```csharp
-public partial class MyPage : Page
-{
-    private IOrganizationContext _orgContext = new HttpOrganizationContext();
-
-    protected void Page_Load(object sender, EventArgs e)
-    {
-        var tenantName = _orgContext.Settings.Name;
-        var tenantSlug = _orgContext.Slug;
-        
-        // Use tenant information...
-    }
-}
-```
-
-To generate tenant-aware URLs in code:
-
-```csharp
-// Returns "/orange/reports" (assuming current tenant is "orange")
-var url = OrganizationUrl.Resolve("~/reports");
-
-// Force a specific tenant
-var url = OrganizationUrl.Resolve("~/reports", "blue");
-```
+URL matching against the dictionary is case-insensitive: `/RED`, `/Red`, and `/red` all resolve to the same tenant.
 
 ## Static files
 
-Static files (CSS, JavaScript, images) in directories like `/css` and `/img` are served directly by IIS without passing through the rewrite rules. This is because the rewrite conditions check `{REQUEST_FILENAME}` and skip actual files.
-
-For tenant-specific static files, you have two options:
-
-1. Store them in a path that includes the tenant: `/public/orange/logo.png`
-2. Serve them dynamically through an HTTP handler that reads from tenant-specific storage
+Tenant pages can use root-relative paths like `/css/theme.css`. The response filter prefixes them with the tenant slug, producing `/red/css/theme.css` in the rendered HTML. The IIS `TenantStaticAssetRewrite` rule then strips the tenant prefix and serves the file from disk. The trip is invisible to the browser and to the page author.
 
 ## Error handling
 
 Two error pages handle tenant resolution failures:
 
-- **context-missing.aspx** - Shown when no tenant slug is present in the URL
-- **context-invalid.aspx** - Shown when the tenant slug doesn't match any known tenant
+- `context-missing.aspx` — no tenant slug found in the URL
+- `context-invalid.aspx` — slug not recognized (shows the requested value)
 
-These pages are excluded from the rewrite rules and operate under the special `empty` tenant context.
+`Application_Error` in `Global.asax.cs` logs unhandled exceptions via `System.Diagnostics.Trace.TraceError` and lets ASP.NET's configured `customErrors` page render the response.
+
+## Accessing the current tenant context
+
+Tenant-scoped pages inherit `TenantPage`:
+
+```csharp
+public partial class MyPage : TenantPage
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        var tenantName = OrgContext.Settings.Name;
+        var tenantSlug = OrgContext.Slug;
+        // ...
+    }
+}
+```
+
+App-scope pages inherit `Page` directly. They have no tenant context; reading `OrgContext.Settings` would throw, which is intentional — app-scope pages must not pretend to be tenant-aware.
+
+To generate a tenant-aware URL in code:
+
+```csharp
+// Reads the slug from the current request context
+var url = OrganizationUrl.Resolve(new HttpContextWrapper(Context), "~/reports");
+
+// Force a specific tenant
+var url = OrganizationUrl.Resolve(null, "~/reports", "blue");
+```
+
+## Cache reload
+
+`OrganizationCache.Reload()` rebuilds the snapshot atomically with `Interlocked.Exchange` and fires `Reloaded`. Subscribers are invoked individually inside try/catch so one throwing handler cannot break the others. The response filter subscribes from its static constructor and rebuilds its slug-aware regex on each reload.
+
+Production deployments should replace the seed data in `Load()` with a database read and call `Reload()` on a schedule or via an admin endpoint.
+
+## HTTPS and security headers
+
+- `RedirectToHttps` URL Rewrite rule redirects HTTP to HTTPS unless the request is from `localhost`/`127.0.0.1` or a TLS-terminating proxy reports `X-Forwarded-Proto: https`.
+- HSTS header (`Strict-Transport-Security: max-age=31536000; includeSubDomains`) on every response.
+- `<customErrors mode="RemoteOnly" />` suppresses stack-trace pages for remote clients.
 
 ## IIS Express configuration
 
-When running locally in IIS Express, you need to allow the `ORGANIZATION_SLUG` server variable for URL Rewrite to work.
+The `ORGANIZATION_SLUG` server variable must be on the IIS allowed list before URL Rewrite will set it. Locally:
 
-1. Open `.vs\{SolutionName}\config\applicationhost.config` (the `.vs` folder is hidden)
-
-2. Find the `<rewrite>` section inside `<system.webServer>`
-
-3. Add the `<allowedServerVariables>` block:
+1. Open `.vs\loom\config\applicationhost.config` (the `.vs` folder is hidden).
+2. Inside `<system.webServer><rewrite>`, add:
 
 ```xml
-<rewrite>
-    <allowedServerVariables>
-        <add name="ORGANIZATION_SLUG" />
-    </allowedServerVariables>
-    <!-- existing rules -->
-</rewrite>
+<allowedServerVariables>
+    <add name="ORGANIZATION_SLUG" />
+</allowedServerVariables>
 ```
 
-4. Restart IIS Express completely (exit from system tray or kill `iisexpress.exe` in Task Manager)
+3. Restart IIS Express (exit from system tray or kill `iisexpress.exe`).
 
-Without this change, you'll see: `HTTP Error 500.50 - URL Rewrite Module Error. The server variable "ORGANIZATION_SLUG" is not allowed to be set.`
+Without this, requests fail with `HTTP Error 500.50 - URL Rewrite Module Error. The server variable "ORGANIZATION_SLUG" is not allowed to be set.`
 
-## IIS Configuration
+## Production IIS configuration
 
-When running in IIS, you need to allow the server variable at the server level. Use IIS Manager or run:
+Allow the server variable at the server level:
 
 ```
 appcmd.exe set config -section:system.webServer/rewrite/allowedServerVariables /+"[name='ORGANIZATION_SLUG']" /commit:apphost
 ```
 
-Alternatively, edit `%windir%\system32\inetsrv\config\applicationHost.config` directly.
+Or edit `%windir%\system32\inetsrv\config\applicationHost.config` directly.
+
+## Build and test
+
+The main project (`src/Loom.csproj`) is a legacy ASP.NET Web Application and requires Visual Studio's MSBuild — `dotnet build` does not work because `Microsoft.WebApplication.targets` is not in the .NET SDK. Build and run from Visual Studio 2022, or from a Developer Command Prompt:
+
+```
+msbuild loom.sln /t:Restore;Build
+vstest.console.exe tests\Loom.Tests\bin\Debug\net48\Loom.Tests.dll
+```
+
+The test project (`tests/Loom.Tests`) uses xUnit + Moq and covers `OrganizationCache`, `OrganizationResolver`, `OrganizationUrl`, `OrganizationHtml`, `OrganizationSettings`, and `OrganizationUrlResponseFilter`.
+
+## Known gaps and follow-ups
+
+- Logging is via `System.Diagnostics.Trace`. Swap in Serilog/NLog before production by introducing a logger interface and replacing the call sites.
+- No correlation/request ID stamped in `Application_BeginRequest`. Add for multi-tenant log aggregation.
+- The reserved list lives in two files (`OrganizationCache.ReservedSlugs` + `<rewriteMap>` in `Web.config`). Startup drift detection catches divergence; consider generating one from the other.
+- `OrganizationResolver.Resolve` is a long method with six branches. Extract per-branch helpers when the routing logic grows further.
+- The tenant home page (`tenants/home.aspx`) still contains a demo subdomain link gated by `Loom.Demo.SubdomainOrganizationSlug`. Move or remove for a clean reference template.

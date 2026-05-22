@@ -70,7 +70,7 @@ namespace Loom
             if (_organizations.TryGetValue(slug, out var settings))
                 return settings;
 
-            throw new ArgumentOutOfRangeException(nameof(slug), $"Organization not found: {slug}");
+            throw new KeyNotFoundException($"Organization not found: {slug}");
         }
 
         public static bool IsValidOrganization(string slug)

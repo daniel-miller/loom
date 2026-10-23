@@ -1,10 +1,47 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import dts from "vite-plugin-dts";
 import path from "path";
+import postcss, { type ChildNode } from "postcss";
 import { readFileSync } from "fs";
 import { registryPaths } from "../registry-paths";
+
+// Claude Design registers every custom property in styles.css as a token, and warns on the ones
+// with no kind or declared under a component selector. Tailwind's --tw-*, Font Awesome's --fa and
+// react-day-picker's --rdp-* are library internals, so each declaration is tagged
+// /* @kind other */. The minified file is one line, so the tag goes on both sides of the
+// declaration; no rule mixes these with real tokens, so neither side can land on a token. It runs
+// on the emitted asset because minification strips ordinary comments.
+const internalVar = /^--(?:tw-|_?fa(?:-|$)|rdp-)/;
+
+function kindTag() {
+  return postcss.comment({ text: "@kind other", raws: { left: " ", right: " " } });
+}
+
+function isKindTag(node: ChildNode | undefined) {
+  return node?.type === "comment" && node.text === "@kind other";
+}
+
+function tagInternalVars(): Plugin {
+  return {
+    name: "tag-internal-vars",
+    enforce: "post",
+    generateBundle(_, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type !== "asset" || !file.fileName.endsWith(".css")) continue;
+        const css =
+          typeof file.source === "string" ? file.source : new TextDecoder().decode(file.source);
+        const root = postcss.parse(css);
+        root.walkDecls(internalVar, (decl) => {
+          if (!isKindTag(decl.prev())) decl.before(kindTag());
+          decl.after(kindTag());
+        });
+        file.source = root.toString();
+      }
+    },
+  };
+}
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf-8")) as {
   dependencies: Record<string, string>;
@@ -24,6 +61,7 @@ export default defineConfig({
     // One rolled-up index.d.ts, so no declaration file is left importing an @/ path the
     // converter cannot follow.
     dts({ tsconfigPath: "./tsconfig.json", entryRoot: "..", rollupTypes: true }),
+    tagInternalVars(),
   ],
   build: {
     lib: {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Label, Slider } from "@daniel-miller/design";
+import { Label, Slider } from "@daniel-miller/loom";
 
 export function PassMark() {
   const [score, setScore] = useState([80]);

@@ -1,4 +1,4 @@
-import { CopyableId } from "@daniel-miller/design";
+import { CopyableId } from "@daniel-miller/loom";
 
 export function Ids() {
   return (

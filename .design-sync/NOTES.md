@@ -1,6 +1,6 @@
 # Claude Design sync notes
 
-The project is "Design" at https://claude.ai/design/p/eae8e665-84b7-4e4d-a6b2-fe1676d82b62
+The project is "Loom" at https://claude.ai/design/p/eae8e665-84b7-4e4d-a6b2-fe1676d82b62
 (first synced 2026-10-09). Package shape, no Storybook: previews are ported from the `web/`
 specimen sections.
 

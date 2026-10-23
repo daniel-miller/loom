@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Button, Toaster, toast } from "@daniel-miller/design";
+import { Button, Toaster, toast } from "@daniel-miller/loom";
 
 // Mount the Toaster once near the app root; call toast() from anywhere.
 export function WithAction() {

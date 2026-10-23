@@ -16,7 +16,7 @@ import {
   SidebarNav,
   SidebarNavItem,
   Topbar,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 // An app passes its router's NavLink through asChild, which sets aria-current on the active item.
 // A preview has no router, so plain anchors set it by hand.

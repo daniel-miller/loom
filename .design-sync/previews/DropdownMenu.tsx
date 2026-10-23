@@ -10,7 +10,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function Actions() {
   const [showArchived, setShowArchived] = useState(false);

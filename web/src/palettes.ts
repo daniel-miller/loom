@@ -11,8 +11,8 @@ export function isPalette(value: string | null): value is Palette {
   return value !== null && value in palettes;
 }
 
-const PALETTE_KEY = "design.palette";
-const THEME_KEY = "design.theme";
+const PALETTE_KEY = "loom.palette";
+const THEME_KEY = "loom.theme";
 
 // ?palette= and ?theme= take precedence over the stored choice, so a headless capture can ask for
 // any combination.

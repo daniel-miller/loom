@@ -1,4 +1,4 @@
-import { Button, Popover, PopoverContent, PopoverTrigger } from "@daniel-miller/design";
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@daniel-miller/loom";
 
 export function ExpiryExplainer() {
   return (

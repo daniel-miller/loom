@@ -1,4 +1,4 @@
-import { Button, DangerZone, DangerZoneItem } from "@daniel-miller/design";
+import { Button, DangerZone, DangerZoneItem } from "@daniel-miller/loom";
 
 export function CompanySettings() {
   return (

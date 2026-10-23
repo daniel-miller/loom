@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function TicketCards() {
   return (

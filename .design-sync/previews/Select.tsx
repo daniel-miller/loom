@@ -7,7 +7,7 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function Open() {
   return (

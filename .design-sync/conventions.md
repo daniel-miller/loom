@@ -6,11 +6,11 @@ control, and Tailwind utility classes with the semantic tokens below for your ow
 
 ## Setup
 
-Link `styles.css` and load `_ds_bundle.js`. Everything is on `window.Design`.
+Link `styles.css` and load `_ds_bundle.js`. Everything is on `window.Loom`.
 
 - **Wrap the tree in `TooltipProvider`.** `Tooltip` throws outside it. The apps use
   `<TooltipProvider delayDuration={200}>` at the root.
-- **Mount `Toaster` once, then call `toast()`.** Both come from `window.Design`.
+- **Mount `Toaster` once, then call `toast()`.** Both come from `window.Loom`.
   `toast("Course renamed")`, or `toast(title, { description, action: { label: "Undo", onClick } })`.
 - **Dark mode is the `dark` class on `<html>`.** Every token flips under it, so components need
   no props for it. Pass `theme="dark"` to `Toaster` to match.
@@ -69,7 +69,7 @@ siblings, such as `DialogContent` and `SelectItem`.
 
 ```jsx
 const { PageContainer, PageHeader, Button, Card, CardHeader, CardTitle, CardContent,
-  Badge, formatDate } = window.Design;
+  Badge, formatDate } = window.Loom;
 
 <PageContainer>
   <PageHeader

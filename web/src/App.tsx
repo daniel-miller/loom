@@ -70,7 +70,7 @@ export function App() {
       <header className="border-border bg-background/90 sticky top-0 z-10 border-b backdrop-blur">
         {/* Left-aligned like PageContainer, which expects an app shell to place it. */}
         <div className="flex max-w-5xl items-center gap-3 px-6 py-3">
-          <span className="font-semibold">Design specimen</span>
+          <span className="font-semibold">Loom specimen</span>
           <div className="ml-auto flex items-center gap-2">
             <Select
               value={palette}

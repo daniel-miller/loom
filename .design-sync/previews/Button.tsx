@@ -1,4 +1,4 @@
-import { Button } from "@daniel-miller/design";
+import { Button } from "@daniel-miller/loom";
 
 export function Variants() {
   return (

@@ -1,4 +1,4 @@
-import { Badge } from "@daniel-miller/design";
+import { Badge } from "@daniel-miller/loom";
 
 export function Variants() {
   return (

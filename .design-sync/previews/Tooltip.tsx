@@ -1,4 +1,4 @@
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@daniel-miller/design";
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@daniel-miller/loom";
 
 export function IconButton() {
   return (

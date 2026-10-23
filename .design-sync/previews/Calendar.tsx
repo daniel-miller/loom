@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar } from "@daniel-miller/design";
+import { Calendar } from "@daniel-miller/loom";
 
 // The flex parent lets the bordered frame shrink to the month grid.
 export function Single() {

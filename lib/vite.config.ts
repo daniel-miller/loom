@@ -9,11 +9,12 @@ import { registryPaths } from "../registry-paths";
 
 // Claude Design registers every custom property in styles.css as a token, and warns on the ones
 // with no kind or declared under a component selector. Tailwind's --tw-*, Font Awesome's --fa and
-// react-day-picker's --rdp-* are library internals, so each declaration is tagged
-// /* @kind other */. The minified file is one line, so the tag goes on both sides of the
-// declaration; no rule mixes these with real tokens, so neither side can land on a token. It runs
-// on the emitted asset because minification strips ordinary comments.
-const internalVar = /^--(?:tw-|_?fa(?:-|$)|rdp-)/;
+// react-day-picker's --rdp-* are library internals, and --ease-*, --animate-*, --aspect-* and
+// --default-transition-* are Tailwind theme defaults rather than tokens, so each declaration is
+// tagged /* @kind other */. A tag attaches to the declaration whose ; it follows, so it goes after
+// the declaration only: one before a rule's first declaration would follow the { and attach to
+// nothing. It runs on the emitted asset because minification strips ordinary comments.
+const internalVar = /^--(?:tw-|_?fa(?:-|$)|rdp-|ease-|animate-|aspect-|default-transition-)/;
 
 function kindTag() {
   return postcss.comment({ text: "@kind other", raws: { left: " ", right: " " } });
@@ -34,8 +35,7 @@ function tagInternalVars(): Plugin {
           typeof file.source === "string" ? file.source : new TextDecoder().decode(file.source);
         const root = postcss.parse(css);
         root.walkDecls(internalVar, (decl) => {
-          if (!isKindTag(decl.prev())) decl.before(kindTag());
-          decl.after(kindTag());
+          if (!isKindTag(decl.next())) decl.after(kindTag());
         });
         file.source = root.toString();
       }

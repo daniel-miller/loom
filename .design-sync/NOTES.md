@@ -30,10 +30,16 @@ specimen sections.
   (`w-16`, `grid-cols-3`, `gap-8`, `sm:grid-cols-2`) rendered unstyled. Arbitrary values
   (`min-h-[300px]`) are still absent by design; previews and designs must use the scale.
 - **Library internals are tagged `/* @kind other */`.** Claude Design registers every custom
-  property in `styles.css` as a token. It warned on 219 `--tw-*` declarations under variant and
-  `[data-*]` selectors, and on 3,837 with no kind, 3,791 of which are Font Awesome's per-icon
-  `--fa`. `tagInternalVars` in `lib/vite.config.ts` tags every `--tw-*`, `--fa*`, `--_fa*` and
-  `--rdp-*` declaration on both sides, after minification. No rule mixes them with real tokens.
+  property in `styles.css` as a token, and warned on 3,837 with no kind, 3,791 of which are Font
+  Awesome's per-icon `--fa`. `tagInternalVars` in `lib/vite.config.ts` tags every `--tw-*`,
+  `--fa*`, `--_fa*` and `--rdp-*` declaration, plus the Tailwind theme defaults `--ease-*`,
+  `--animate-*`, `--aspect-*` and `--default-transition-*`, after minification. The tag goes after
+  the declaration only: Claude Design attaches a tag to the declaration whose `;` it follows, so a
+  tag before a rule's first declaration follows the `{` and attaches to nothing (confirmed by
+  Claude Design, 2026-10-23).
+- **The 219 "declared under a component selector" warning is expected.** 184 of them are
+  `--tw-space-x-reverse` and `--tw-space-y-reverse`, which Tailwind declares inside its
+  `space-*` and `divide-*` utility rules. Tags cannot clear it, and it changes nothing visible.
 - **Overlay previews open by default** (`defaultOpen` or `open`) with `cardMode: single` and a
   viewport per component. `DropdownMenu` sets `modal={false}` so the open menu does not lock the
   card.
@@ -55,7 +61,8 @@ None at the end of the first sync.
 - **Extracted `.d.ts` files drop inherited DOM props** (`onClick`, `placeholder`, `disabled`) by
   converter design, and print `React_2.ReactNode` where the rolled-up types alias React. Both are
   cosmetic for the agent; override with `dtsPropsFor` if a component's API reads wrong.
-- **`_ds_bundle.css` is about 1.65 MB** because the fonts and Font Awesome are inlined, and the
-  `@kind` tags add 144 KB (5 KB gzipped). Fine today; watch it if more font families are added.
-- **The `@kind` placement is unconfirmed.** No published doc says which side of a declaration
-  Claude Design reads the tag from, hence both. If the warnings persist after a sync, ask it.
+- **`_ds_bundle.css` is about 1.58 MB** because the fonts and Font Awesome are inlined, and the
+  `@kind` tags add 71 KB. Fine today; watch it if more font families are added.
+- **The `@kind` prefix list is hand-maintained.** A Tailwind upgrade, or a utility class that
+  pulls in another theme default, can emit a variable outside `internalVar`, and Claude Design
+  warns on it again with no kind. Add its prefix to the pattern in `lib/vite.config.ts`.

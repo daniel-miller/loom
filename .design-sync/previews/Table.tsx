@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
   formatDate,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 const tickets = [
   { id: 48211, learner: "Jordan Lee", course: "H2S Alive", expires: "2028-11-05T00:00:00", status: "valid" },

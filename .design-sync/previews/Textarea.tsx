@@ -1,4 +1,4 @@
-import { Label, Textarea } from "@daniel-miller/design";
+import { Label, Textarea } from "@daniel-miller/loom";
 
 export function WithLabel() {
   return (

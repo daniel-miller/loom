@@ -1,5 +1,5 @@
 {
-  "name": "@daniel-miller/design",
+  "name": "@daniel-miller/loom",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -47,6 +47,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "postcss": "^8.5.29",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",

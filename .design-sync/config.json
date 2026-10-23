@@ -1,8 +1,8 @@
 {
   "projectId": "eae8e665-84b7-4e4d-a6b2-fe1676d82b62",
   "shape": "package",
-  "pkg": "@daniel-miller/design",
-  "globalName": "Design",
+  "pkg": "@daniel-miller/loom",
+  "globalName": "Loom",
   "buildCmd": "npm run build:lib",
   "componentSrcMap": {
     "CardContent": null,

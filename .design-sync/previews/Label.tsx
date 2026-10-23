@@ -1,4 +1,4 @@
-import { Checkbox, Input, Label } from "@daniel-miller/design";
+import { Checkbox, Input, Label } from "@daniel-miller/loom";
 
 export function WithInput() {
   return (

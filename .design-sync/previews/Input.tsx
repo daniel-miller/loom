@@ -1,4 +1,4 @@
-import { Input, Label } from "@daniel-miller/design";
+import { Input, Label } from "@daniel-miller/loom";
 
 export function Fields() {
   return (

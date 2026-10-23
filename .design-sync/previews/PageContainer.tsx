@@ -6,7 +6,7 @@ import {
   CardTitle,
   PageContainer,
   PageHeader,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function DefaultWidth() {
   return (

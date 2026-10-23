@@ -1,4 +1,4 @@
-import { ConfirmDialog } from "@daniel-miller/design";
+import { ConfirmDialog } from "@daniel-miller/loom";
 
 const deleteCopy = {
   title: "Delete course?",

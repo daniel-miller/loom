@@ -9,7 +9,7 @@ import {
   DialogTrigger,
   Input,
   Label,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function RenameCourse() {
   return (

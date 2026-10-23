@@ -1,4 +1,4 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@daniel-miller/design";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@daniel-miller/loom";
 
 export function Pill() {
   return (

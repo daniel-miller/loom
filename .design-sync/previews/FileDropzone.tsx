@@ -1,4 +1,4 @@
-import { FileDropzone } from "@daniel-miller/design";
+import { FileDropzone } from "@daniel-miller/loom";
 
 export function Default() {
   return (

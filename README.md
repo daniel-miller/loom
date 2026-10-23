@@ -1,4 +1,4 @@
-# Design
+# Loom
 
 When you start a new web app, the fastest path is to copy `globals.css` and the `components/ui`
 folder from the last one. Four apps have done that so far - `cmds-app/platform`, `bump`,
@@ -24,34 +24,34 @@ accent.
 - `docs/` - visual foundations and page guidelines.
 - `web/` - the specimen app: every component, in every palette, rendered from the registry
   sources.
-- `lib/` - `@daniel-miller/design`, the registry built as one library (`npm run build:lib`) for
+- `lib/` - `@daniel-miller/loom`, the registry built as one library (`npm run build:lib`) for
   the Claude Design converter. Its `dist/styles.css` is the cmds palette with the fonts and Font
   Awesome inlined, compiled from the classes in the registry and the specimen.
 
 ## Using it in an app
 
-The registry is namespaced `@design`. Without the namespace, a bare name such as `button` in
+The registry is namespaced `@loom`. Without the namespace, a bare name such as `button` in
 `registryDependencies` resolves to shadcn's own registry, not this one. Add it to the app's
 `components.json`:
 
 ```json
 "registries": {
-  "@design": "https://design.danielmiller.ca/r/{name}.json"
+  "@loom": "https://loom.danielmiller.ca/r/{name}.json"
 }
 ```
 
 Then install a palette (it pulls in `tokens`) and whatever primitives the app needs:
 
 ```powershell
-npx shadcn add @design/palette-cmds @design/button @design/dialog @design/confirm-dialog
+npx shadcn add @loom/palette-cmds @loom/button @loom/dialog @loom/confirm-dialog
 ```
 
-The CSS lands in `src/styles/design/`, and the app's `globals.css` imports it after Tailwind:
+The CSS lands in `src/styles/loom/`, and the app's `globals.css` imports it after Tailwind:
 
 ```css
 @import "tailwindcss";
-@import "./design/base.css";
-@import "./design/palettes/cmds.css";
+@import "./loom/base.css";
+@import "./loom/palettes/cmds.css";
 ```
 
 Sources import `@/lib/cn` and `@/components/ui/*`, the paths every app's `components.json`
@@ -80,8 +80,8 @@ paths an app uses, and swaps whole palette stylesheets from the toolbar.
 ## Publishing the registry
 
 A change merged into `registry/`, `tokens/` or `palettes/` reaches no app until it is published.
-Apps install from `https://design.danielmiller.ca/r/{name}.json`, which serves the Cloudflare R2
-bucket `design`. Publish from the repo root:
+Apps install from `https://loom.danielmiller.ca/r/{name}.json`, which serves the Cloudflare R2
+bucket `loom`. Publish from the repo root:
 
 ```powershell
 npx wrangler@4 login    # once per machine
@@ -94,7 +94,7 @@ is there. Each file is cached for five minutes, so apps see a publish within min
 Removing an item from `registry.json` does not remove its published file. Delete that by hand:
 
 ```powershell
-npx wrangler@4 r2 object delete design/r/<name>.json --remote
+npx wrangler@4 r2 object delete loom/r/<name>.json --remote
 ```
 
 ## Conventions

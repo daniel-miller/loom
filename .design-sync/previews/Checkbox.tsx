@@ -1,4 +1,4 @@
-import { Checkbox, Label } from "@daniel-miller/design";
+import { Checkbox, Label } from "@daniel-miller/loom";
 
 export function States() {
   return (

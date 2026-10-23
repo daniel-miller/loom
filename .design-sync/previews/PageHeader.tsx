@@ -1,4 +1,4 @@
-import { Button, PageHeader } from "@daniel-miller/design";
+import { Button, PageHeader } from "@daniel-miller/loom";
 
 export function WithActions() {
   return (

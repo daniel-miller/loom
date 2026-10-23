@@ -1,6 +1,6 @@
 # Claude Design sync notes
 
-The project is "Design" at https://claude.ai/design/p/eae8e665-84b7-4e4d-a6b2-fe1676d82b62
+The project is "Loom" at https://claude.ai/design/p/eae8e665-84b7-4e4d-a6b2-fe1676d82b62
 (first synced 2026-10-09). Package shape, no Storybook: previews are ported from the `web/`
 specimen sections.
 
@@ -29,6 +29,11 @@ specimen sections.
   stylesheet held only classes found in `registry/` and `web/src`, so common layout classes
   (`w-16`, `grid-cols-3`, `gap-8`, `sm:grid-cols-2`) rendered unstyled. Arbitrary values
   (`min-h-[300px]`) are still absent by design; previews and designs must use the scale.
+- **Library internals are tagged `/* @kind other */`.** Claude Design registers every custom
+  property in `styles.css` as a token. It warned on 219 `--tw-*` declarations under variant and
+  `[data-*]` selectors, and on 3,837 with no kind, 3,791 of which are Font Awesome's per-icon
+  `--fa`. `tagInternalVars` in `lib/vite.config.ts` tags every `--tw-*`, `--fa*`, `--_fa*` and
+  `--rdp-*` declaration on both sides, after minification. No rule mixes them with real tokens.
 - **Overlay previews open by default** (`defaultOpen` or `open`) with `cardMode: single` and a
   viewport per component. `DropdownMenu` sets `modal={false}` so the open menu does not lock the
   card.
@@ -50,5 +55,7 @@ None at the end of the first sync.
 - **Extracted `.d.ts` files drop inherited DOM props** (`onClick`, `placeholder`, `disabled`) by
   converter design, and print `React_2.ReactNode` where the rolled-up types alias React. Both are
   cosmetic for the agent; override with `dtsPropsFor` if a component's API reads wrong.
-- **`_ds_bundle.css` is about 1.5 MB** because the fonts and Font Awesome are inlined. Fine
-  today; watch it if more font families are added.
+- **`_ds_bundle.css` is about 1.65 MB** because the fonts and Font Awesome are inlined, and the
+  `@kind` tags add 144 KB (5 KB gzipped). Fine today; watch it if more font families are added.
+- **The `@kind` placement is unconfirmed.** No published doc says which side of a declaration
+  Claude Design reads the tag from, hence both. If the warnings persist after a sync, ask it.

@@ -8,7 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@daniel-miller/design";
+} from "@daniel-miller/loom";
 
 export function Filters() {
   return (

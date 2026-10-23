@@ -1,4 +1,4 @@
-import { Skeleton } from "@daniel-miller/design";
+import { Skeleton } from "@daniel-miller/loom";
 
 export function ProfileRow() {
   return (

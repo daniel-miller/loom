@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Builds the shadcn registry and publishes it to https://design.danielmiller.ca/r/.
+Builds the shadcn registry and publishes it to https://loom.danielmiller.ca/r/.
 
 .DESCRIPTION
-Apps install from https://design.danielmiller.ca/r/{name}.json, which serves the Cloudflare R2
-bucket `design`. This runs `npm run build:registry` to write public/r/, then uploads every file
+Apps install from https://loom.danielmiller.ca/r/{name}.json, which serves the Cloudflare R2
+bucket `loom`. This runs `npm run build:registry` to write public/r/, then uploads every file
 there to r/<name>.json in the bucket. Uploads overwrite, so running it twice is harmless.
 
 Needs wrangler signed in to the Cloudflare account that owns the bucket: `npx wrangler@4 login`.
@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outDir   = Join-Path $repoRoot 'public\r'
-$bucket   = 'design'
+$bucket   = 'loom'
 
 Push-Location $repoRoot
 try {
@@ -37,7 +37,7 @@ try {
         Write-Host "  r/$($file.Name)"
     }
 
-    Write-Host "Published $($files.Count) files to https://design.danielmiller.ca/r/"
+    Write-Host "Published $($files.Count) files to https://loom.danielmiller.ca/r/"
 }
 finally {
     Pop-Location
